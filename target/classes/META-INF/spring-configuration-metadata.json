@@ -1,0 +1,111 @@
+{
+  "groups": [
+    {
+      "name": "api",
+      "type": "digital.pragmatech.config.ApiConfiguration",
+      "sourceType": "digital.pragmatech.config.ApiConfiguration"
+    },
+    {
+      "name": "api.mailchimp",
+      "type": "digital.pragmatech.config.ApiConfiguration$MailchimpConfig",
+      "sourceType": "digital.pragmatech.config.ApiConfiguration"
+    },
+    {
+      "name": "api.mailerlite",
+      "type": "digital.pragmatech.config.ApiConfiguration$MailerLiteConfig",
+      "sourceType": "digital.pragmatech.config.ApiConfiguration"
+    },
+    {
+      "name": "migration",
+      "type": "digital.pragmatech.config.MigrationConfig",
+      "sourceType": "digital.pragmatech.config.MigrationConfig"
+    },
+    {
+      "name": "migration.rate-limit",
+      "type": "digital.pragmatech.config.MigrationConfig$RateLimitConfig",
+      "sourceType": "digital.pragmatech.config.MigrationConfig"
+    },
+    {
+      "name": "migration.rate-limit.mailchimp",
+      "type": "digital.pragmatech.config.MigrationConfig$RateLimitConfig$MailchimpLimits",
+      "sourceType": "digital.pragmatech.config.MigrationConfig$RateLimitConfig"
+    },
+    {
+      "name": "migration.rate-limit.mailerlite",
+      "type": "digital.pragmatech.config.MigrationConfig$RateLimitConfig$MailerLiteLimits",
+      "sourceType": "digital.pragmatech.config.MigrationConfig$RateLimitConfig"
+    },
+    {
+      "name": "migration.retry",
+      "type": "digital.pragmatech.config.MigrationConfig$RetryConfig",
+      "sourceType": "digital.pragmatech.config.MigrationConfig"
+    }
+  ],
+  "properties": [
+    {
+      "name": "api.mailchimp.api-key",
+      "type": "java.lang.String",
+      "sourceType": "digital.pragmatech.config.ApiConfiguration$MailchimpConfig"
+    },
+    {
+      "name": "api.mailchimp.base-url",
+      "type": "java.lang.String",
+      "sourceType": "digital.pragmatech.config.ApiConfiguration$MailchimpConfig"
+    },
+    {
+      "name": "api.mailchimp.datacenter",
+      "type": "java.lang.String",
+      "sourceType": "digital.pragmatech.config.ApiConfiguration$MailchimpConfig"
+    },
+    {
+      "name": "api.mailerlite.api-token",
+      "type": "java.lang.String",
+      "sourceType": "digital.pragmatech.config.ApiConfiguration$MailerLiteConfig"
+    },
+    {
+      "name": "api.mailerlite.base-url",
+      "type": "java.lang.String",
+      "sourceType": "digital.pragmatech.config.ApiConfiguration$MailerLiteConfig"
+    },
+    {
+      "name": "migration.batch-size",
+      "type": "java.lang.Integer",
+      "sourceType": "digital.pragmatech.config.MigrationConfig",
+      "defaultValue": 500
+    },
+    {
+      "name": "migration.rate-limit.mailchimp.connections",
+      "type": "java.lang.Integer",
+      "sourceType": "digital.pragmatech.config.MigrationConfig$RateLimitConfig$MailchimpLimits",
+      "defaultValue": 10
+    },
+    {
+      "name": "migration.rate-limit.mailchimp.timeout",
+      "type": "java.lang.Long",
+      "sourceType": "digital.pragmatech.config.MigrationConfig$RateLimitConfig$MailchimpLimits",
+      "defaultValue": 120000
+    },
+    {
+      "name": "migration.rate-limit.mailerlite.requests-per-minute",
+      "type": "java.lang.Integer",
+      "sourceType": "digital.pragmatech.config.MigrationConfig$RateLimitConfig$MailerLiteLimits",
+      "defaultValue": 120
+    },
+    {
+      "name": "migration.retry.backoff-delay",
+      "type": "java.lang.Long",
+      "sourceType": "digital.pragmatech.config.MigrationConfig$RetryConfig",
+      "defaultValue": 1000
+    },
+    {
+      "name": "migration.retry.max-attempts",
+      "type": "java.lang.Integer",
+      "sourceType": "digital.pragmatech.config.MigrationConfig$RetryConfig",
+      "defaultValue": 3
+    }
+  ],
+  "hints": [],
+  "ignored": {
+    "properties": []
+  }
+}

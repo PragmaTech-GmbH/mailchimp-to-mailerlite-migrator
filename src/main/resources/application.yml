@@ -1,0 +1,71 @@
+spring:
+  application:
+    name: mailchimp-to-mailerlite-migrator
+  
+  thymeleaf:
+    cache: false
+    mode: HTML
+    encoding: UTF-8
+    
+  task:
+    execution:
+      pool:
+        core-size: 5
+        max-size: 10
+        queue-capacity: 100
+    scheduling:
+      pool:
+        size: 5
+
+server:
+  port: 8080
+  error:
+    include-message: always
+    include-binding-errors: always
+
+logging:
+  level:
+    digital.pragmatech: DEBUG
+    org.springframework.web: INFO
+    org.springframework.web.client.RestClient: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+migration:
+  batch-size: 500
+  retry:
+    max-attempts: 3
+    backoff-delay: 1000
+  rate-limit:
+    mailchimp:
+      connections: 10
+      timeout: 120000
+    mailerlite:
+      requests-per-minute: 120
+  
+api:
+  mailchimp:
+    base-url: https://{datacenter}.api.mailchimp.com/3.0
+  mailerlite:
+    base-url: https://connect.mailerlite.com/api
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+    metrics:
+      enabled: true
+  info:
+    build:
+      enabled: true
+    git:
+      mode: full
+  health:
+    diskspace:
+      enabled: true

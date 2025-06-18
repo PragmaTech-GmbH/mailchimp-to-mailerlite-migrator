@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Migration Dashboard - Mailchimp to MailerLite</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">Migration Dashboard</h1>
+                <p class="text-gray-600">Monitor your Mailchimp to MailerLite migration progress</p>
+            </div>
+            <a href="/" class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700">
+                ← Back to Setup
+            </a>
+        </div>
+
+        <!-- Connection Status -->
+        <div id="connection-status" class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Connection Status</h2>
+            <div class="flex space-x-4">
+                <div id="mailchimp-status" class="flex items-center">
+                    <div class="w-3 h-3 bg-gray-400 rounded-full mr-2"></div>
+                    <span>Mailchimp: Checking...</span>
+                </div>
+                <div id="mailerlite-status" class="flex items-center">
+                    <div class="w-3 h-3 bg-gray-400 rounded-full mr-2"></div>
+                    <span>MailerLite: Checking...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Migration Control Panel -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Migration Control</h2>
+            
+            <div id="migration-controls" class="flex space-x-4">
+                <button id="start-migration-btn" 
+                        onclick="startMigration()"
+                        class="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700 transition duration-200">
+                    Start Migration
+                </button>
+                
+                <button id="pause-migration-btn" 
+                        onclick="pauseMigration()"
+                        class="bg-yellow-600 text-white px-6 py-2 rounded-md hover:bg-yellow-700 transition duration-200 hidden">
+                    Pause Migration
+                </button>
+                
+                <button id="resume-migration-btn" 
+                        onclick="resumeMigration()"
+                        class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition duration-200 hidden">
+                    Resume Migration
+                </button>
+                
+                <button id="cancel-migration-btn" 
+                        onclick="cancelMigration()"
+                        class="bg-red-600 text-white px-6 py-2 rounded-md hover:bg-red-700 transition duration-200 hidden">
+                    Cancel Migration
+                </button>
+            </div>
+            
+            <div id="migration-message" class="mt-4 hidden">
+                <!-- Dynamic messages will appear here -->
+            </div>
+        </div>
+
+        <!-- Migration Progress -->
+        <div id="progress-section" class="bg-white rounded-lg shadow-md p-6 mb-6 hidden">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Migration Progress</h2>
+            
+            <div class="mb-4">
+                <div class="flex justify-between text-sm text-gray-600 mb-1">
+                    <span id="current-phase">Phase: Initialization</span>
+                    <span id="progress-percentage">0%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                    <div id="progress-bar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                <div class="text-center">
+                    <div id="total-items" class="text-2xl font-bold text-blue-600">0</div>
+                    <div class="text-sm text-gray-600">Total Items</div>
+                </div>
+                <div class="text-center">
+                    <div id="processed-items" class="text-2xl font-bold text-green-600">0</div>
+                    <div class="text-sm text-gray-600">Processed</div>
+                </div>
+                <div class="text-center">
+                    <div id="successful-items" class="text-2xl font-bold text-green-600">0</div>
+                    <div class="text-sm text-gray-600">Successful</div>
+                </div>
+                <div class="text-center">
+                    <div id="failed-items" class="text-2xl font-bold text-red-600">0</div>
+                    <div class="text-sm text-gray-600">Failed</div>
+                </div>
+            </div>
+
+            <!-- Statistics -->
+            <div class="border-t pt-4">
+                <h3 class="text-lg font-semibold mb-2">Migration Statistics</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                        <span class="text-gray-600">Subscribers:</span>
+                        <span id="migrated-subscribers" class="font-semibold">0</span> / 
+                        <span id="total-subscribers">0</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-600">Groups:</span>
+                        <span id="migrated-groups" class="font-semibold">0</span> / 
+                        <span id="total-tags">0</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-600">Products:</span>
+                        <span id="migrated-products" class="font-semibold">0</span> / 
+                        <span id="total-products">0</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-600">Time Remaining:</span>
+                        <span id="estimated-time" class="font-semibold">--</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error Log -->
+        <div id="error-section" class="bg-white rounded-lg shadow-md p-6 hidden">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Issues & Errors</h2>
+            <div id="error-list" class="space-y-2">
+                <!-- Errors will be displayed here -->
+            </div>
+        </div>
+
+        <!-- Completion Section -->
+        <div id="completion-section" class="bg-white rounded-lg shadow-md p-6 hidden">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Migration Complete!</h2>
+            <div class="bg-green-50 border border-green-200 rounded p-4 mb-4">
+                <p class="text-green-800">🎉 Your migration has been completed successfully!</p>
+            </div>
+            
+            <div class="space-y-4">
+                <h3 class="text-lg font-semibold">Next Steps:</h3>
+                <ol class="list-decimal list-inside space-y-2 text-gray-700">
+                    <li>Review your migrated subscribers and groups in MailerLite</li>
+                    <li>Set up your welcome email automation</li>
+                    <li>Create purchase-based automation sequences</li>
+                    <li>Schedule your regular newsletter campaigns</li>
+                    <li>Update your website forms to use MailerLite</li>
+                </ol>
+                
+                <div class="mt-6">
+                    <a href="/results" class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700">
+                        View Detailed Results
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let stompClient = null;
+        let migrationStatus = null;
+
+        // Initialize WebSocket connection
+        function connectWebSocket() {
+            const socket = new SockJS('/ws-migration');
+            stompClient = Stomp.over(socket);
+            
+            stompClient.connect({}, function(frame) {
+                console.log('Connected to WebSocket');
+                
+                stompClient.subscribe('/topic/migration-progress', function(message) {
+                    const status = JSON.parse(message.body);
+                    updateMigrationDisplay(status);
+                });
+            });
+        }
+
+        // API calls
+        function startMigration() {
+            fetch('/api/migration/start', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showMessage('Migration started successfully!', 'success');
+                        document.getElementById('progress-section').classList.remove('hidden');
+                        updateControlButtons('in_progress');
+                    } else {
+                        showMessage('Failed to start migration: ' + data.message, 'error');
+                    }
+                })
+                .catch(error => showMessage('Error: ' + error.message, 'error'));
+        }
+
+        function pauseMigration() {
+            fetch('/api/migration/pause', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showMessage('Migration paused', 'info');
+                        updateControlButtons('paused');
+                    } else {
+                        showMessage('Failed to pause migration: ' + data.message, 'error');
+                    }
+                })
+                .catch(error => showMessage('Error: ' + error.message, 'error'));
+        }
+
+        function resumeMigration() {
+            fetch('/api/migration/resume', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showMessage('Migration resumed', 'success');
+                        updateControlButtons('in_progress');
+                    } else {
+                        showMessage('Failed to resume migration: ' + data.message, 'error');
+                    }
+                })
+                .catch(error => showMessage('Error: ' + error.message, 'error'));
+        }
+
+        function cancelMigration() {
+            if (confirm('Are you sure you want to cancel the migration?')) {
+                fetch('/api/migration/cancel', { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            showMessage('Migration cancelled', 'info');
+                            updateControlButtons('cancelled');
+                        } else {
+                            showMessage('Failed to cancel migration: ' + data.message, 'error');
+                        }
+                    })
+                    .catch(error => showMessage('Error: ' + error.message, 'error'));
+            }
+        }
+
+        function updateMigrationDisplay(status) {
+            migrationStatus = status;
+            
+            // Update phase
+            document.getElementById('current-phase').textContent = 'Phase: ' + status.phase;
+            
+            // Update progress
+            if (status.progress) {
+                const percentage = status.progress.percentComplete || 0;
+                document.getElementById('progress-percentage').textContent = percentage.toFixed(1) + '%';
+                document.getElementById('progress-bar').style.width = percentage + '%';
+                
+                document.getElementById('total-items').textContent = status.progress.totalItems || 0;
+                document.getElementById('processed-items').textContent = status.progress.processedItems || 0;
+                document.getElementById('successful-items').textContent = status.progress.successfulItems || 0;
+                document.getElementById('failed-items').textContent = status.progress.failedItems || 0;
+            }
+            
+            // Update statistics
+            if (status.statistics) {
+                document.getElementById('total-subscribers').textContent = status.statistics.totalSubscribers || 0;
+                document.getElementById('migrated-subscribers').textContent = status.statistics.migratedSubscribers || 0;
+                document.getElementById('total-tags').textContent = status.statistics.totalTags || 0;
+                document.getElementById('migrated-groups').textContent = status.statistics.migratedGroups || 0;
+                document.getElementById('total-products').textContent = status.statistics.totalProducts || 0;
+                document.getElementById('migrated-products').textContent = status.statistics.migratedProducts || 0;
+                
+                const timeRemaining = status.statistics.estimatedTimeRemaining || 0;
+                document.getElementById('estimated-time').textContent = timeRemaining > 0 ? timeRemaining + ' min' : '--';
+            }
+            
+            // Update errors
+            if (status.errors && status.errors.length > 0) {
+                document.getElementById('error-section').classList.remove('hidden');
+                updateErrorDisplay(status.errors);
+            }
+            
+            // Update control buttons based on state
+            updateControlButtons(status.state);
+            
+            // Show completion if done
+            if (status.state === 'COMPLETED') {
+                document.getElementById('completion-section').classList.remove('hidden');
+            }
+        }
+
+        function updateControlButtons(state) {
+            const startBtn = document.getElementById('start-migration-btn');
+            const pauseBtn = document.getElementById('pause-migration-btn');
+            const resumeBtn = document.getElementById('resume-migration-btn');
+            const cancelBtn = document.getElementById('cancel-migration-btn');
+            
+            // Hide all buttons first
+            [startBtn, pauseBtn, resumeBtn, cancelBtn].forEach(btn => btn.classList.add('hidden'));
+            
+            switch (state) {
+                case 'in_progress':
+                case 'IN_PROGRESS':
+                    pauseBtn.classList.remove('hidden');
+                    cancelBtn.classList.remove('hidden');
+                    break;
+                case 'paused':
+                case 'PAUSED':
+                    resumeBtn.classList.remove('hidden');
+                    cancelBtn.classList.remove('hidden');
+                    break;
+                case 'completed':
+                case 'COMPLETED':
+                case 'failed':
+                case 'FAILED':
+                case 'cancelled':
+                    startBtn.classList.remove('hidden');
+                    break;
+                default:
+                    startBtn.classList.remove('hidden');
+            }
+        }
+
+        function updateErrorDisplay(errors) {
+            const errorList = document.getElementById('error-list');
+            errorList.innerHTML = '';
+            
+            errors.forEach(error => {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'bg-red-50 border border-red-200 rounded p-3';
+                errorDiv.innerHTML = `
+                    <div class="text-sm">
+                        <span class="font-semibold text-red-800">${error.phase}:</span>
+                        <span class="text-red-600">${error.errorMessage}</span>
+                        ${error.entity ? `<br><span class="text-gray-600">Entity: ${error.entity} (${error.entityId || 'N/A'})</span>` : ''}
+                    </div>
+                `;
+                errorList.appendChild(errorDiv);
+            });
+        }
+
+        function showMessage(message, type) {
+            const messageDiv = document.getElementById('migration-message');
+            const typeClasses = {
+                success: 'bg-green-100 border-green-400 text-green-700',
+                error: 'bg-red-100 border-red-400 text-red-700',
+                info: 'bg-blue-100 border-blue-400 text-blue-700'
+            };
+            
+            messageDiv.className = `p-4 border rounded ${typeClasses[type] || typeClasses.info}`;
+            messageDiv.textContent = message;
+            messageDiv.classList.remove('hidden');
+            
+            setTimeout(() => messageDiv.classList.add('hidden'), 5000);
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            connectWebSocket();
+            
+            // Check current migration status
+            fetch('/api/migration/status')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.data) {
+                        updateMigrationDisplay(data.data);
+                        document.getElementById('progress-section').classList.remove('hidden');
+                    }
+                })
+                .catch(error => console.log('No active migration'));
+        });
+    </script>
+</body>
+</html>
