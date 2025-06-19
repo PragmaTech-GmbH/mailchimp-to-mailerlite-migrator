@@ -1,8 +1,6 @@
 # Mailchimp to MailerLite Migrator
 
-[![CI](https://github.com/your-username/mailchimp-to-mailerlite-migrator/actions/workflows/ci.yml/badge.svg)](https://github.com/your-username/mailchimp-to-mailerlite-migrator/actions/workflows/ci.yml)
-[![Code Quality](https://github.com/your-username/mailchimp-to-mailerlite-migrator/actions/workflows/quality.yml/badge.svg)](https://github.com/your-username/mailchimp-to-mailerlite-migrator/actions/workflows/quality.yml)
-[![Docker](https://github.com/your-username/mailchimp-to-mailerlite-migrator/actions/workflows/docker.yml/badge.svg)](https://github.com/your-username/mailchimp-to-mailerlite-migrator/actions/workflows/docker.yml)
+[![CI](https://github.com/PragmaTech-GmbH/mailchimp-to-mailerlite-migrator/actions/workflows/ci.yml/badge.svg)](https://github.com/PragmaTech-GmbH/mailchimp-to-mailerlite-migrator/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A comprehensive Spring Boot application for seamlessly migrating your email marketing data from Mailchimp to MailerLite. This tool handles subscribers, tags/groups, e-commerce data, and provides guidance for campaign migration.
@@ -30,43 +28,32 @@ A comprehensive Spring Boot application for seamlessly migrating your email mark
 ### Option 1: Run from Source
 
 1. **Clone the repository**
-   ```bash
-   git clone https://github.com/your-username/mailchimp-to-mailerlite-migrator.git
-   cd mailchimp-to-mailerlite-migrator
-   ```
 
-2. **Build the application**
-   ```bash
-   mvn clean install
-   ```
+```bash
+git clone https://github.com/your-username/mailchimp-to-mailerlite-migrator.git
+cd mailchimp-to-mailerlite-migrator
+```
+   
+2. **Run the application**
 
-3. **Run the application**
-   ```bash
-   mvn spring-boot:run
-   ```
+```bash
+./mvnw spring-boot:run
+```
 
 4. **Access the application**
-   Open your browser and navigate to `http://localhost:8080`
+
+Open your browser and navigate to `http://localhost:8080`
 
 ### Option 2: Docker
 
 1. **Using Docker Compose (Recommended)**
-   ```bash
-   git clone https://github.com/your-username/mailchimp-to-mailerlite-migrator.git
-   cd mailchimp-to-mailerlite-migrator
-   docker-compose up
-   ```
 
-2. **Using Docker directly**
-   ```bash
-   docker run -p 8080:8080 ghcr.io/your-username/mailchimp-to-mailerlite-migrator:latest
-   ```
+```bash
+git clone https://github.com/your-username/mailchimp-to-mailerlite-migrator.git
+cd mailchimp-to-mailerlite-migrator
+docker compose up
+```
 
-3. **Building Docker image locally**
-   ```bash
-   docker build -t mailchimp-migrator .
-   docker run -p 8080:8080 mailchimp-migrator
-   ```
 
 ## 📖 Usage
 
@@ -145,59 +132,16 @@ The project includes comprehensive tests with WireMock for API integration testi
 
 ```bash
 # Run all tests
-mvn test
+./mvnw test
 
 # Run tests with coverage
-mvn clean verify
+./mvnw verify
 
 # Run specific test class
-mvn test -Dtest=MailchimpServiceIntegrationTest
+./mvnw test -Dtest=MailchimpServiceIntegrationTest
 
 # Run integration tests only
-mvn failsafe:integration-test
-```
-
-## 🔄 CI/CD Pipeline
-
-The project includes a comprehensive CI/CD pipeline with GitHub Actions:
-
-### Workflows
-
-1. **CI Workflow** (`.github/workflows/ci.yml`)
-   - Runs on every push and pull request
-   - Tests against Java 21 and 22
-   - Executes `./mvnw verify`
-   - Generates test reports and coverage
-   - Uploads build artifacts
-
-2. **Code Quality** (`.github/workflows/quality.yml`)
-   - Code formatting checks with Spotless
-   - SonarCloud analysis (if configured)
-   - Codecov integration
-   - PR coverage comments
-
-3. **Security Scan** (`.github/workflows/ci.yml`)
-   - OWASP dependency vulnerability scanning
-   - Security report generation
-
-4. **Docker Build** (`.github/workflows/docker.yml`)
-   - Multi-platform Docker builds (AMD64, ARM64)
-   - Publishes to GitHub Container Registry
-   - Automatic tagging based on branches/tags
-
-5. **Release** (`.github/workflows/release.yml`)
-   - Triggered on GitHub releases
-   - Creates release artifacts (JAR, TAR.GZ, ZIP)
-   - Automatic version management
-
-### Status Badges
-
-Add these badges to your repository README:
-
-```markdown
-[![CI](https://github.com/your-username/mailchimp-to-mailerlite-migrator/actions/workflows/ci.yml/badge.svg)](https://github.com/your-username/mailchimp-to-mailerlite-migrator/actions/workflows/ci.yml)
-[![Code Quality](https://github.com/your-username/mailchimp-to-mailerlite-migrator/actions/workflows/quality.yml/badge.svg)](https://github.com/your-username/mailchimp-to-mailerlite-migrator/actions/workflows/quality.yml)
-[![Docker](https://github.com/your-username/mailchimp-to-mailerlite-migrator/actions/workflows/docker.yml/badge.svg)](https://github.com/your-username/mailchimp-to-mailerlite-migrator/actions/workflows/docker.yml)
+./mvnw failsafe:integration-test
 ```
 
 ## 🏗️ Architecture
