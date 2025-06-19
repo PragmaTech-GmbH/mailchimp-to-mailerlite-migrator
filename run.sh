@@ -6,6 +6,30 @@
 echo "🚀 Starting Mailchimp to MailerLite Migrator..."
 echo ""
 
+# Load environment variables from .env file if it exists
+if [ -f .env ]; then
+    echo "📄 Loading environment variables from .env file..."
+    set -a
+    source .env
+    set +a
+    echo "✅ Environment variables loaded"
+    
+    # Display loaded API keys (masked for security)
+    if [ ! -z "$MAILCHIMP_API_KEY" ]; then
+        echo "   • MAILCHIMP_API_KEY: ${MAILCHIMP_API_KEY:0:10}...${MAILCHIMP_API_KEY: -4}"
+    fi
+    if [ ! -z "$MAILERLITE_API_TOKEN" ]; then
+        echo "   • MAILERLITE_API_TOKEN: ${MAILERLITE_API_TOKEN:0:10}...${MAILERLITE_API_TOKEN: -4}"
+    fi
+else
+    echo "ℹ️  No .env file found. You can create one to pre-configure API keys:"
+    echo "   Create a .env file with:"
+    echo "   MAILCHIMP_API_KEY=your-mailchimp-api-key"
+    echo "   MAILERLITE_API_TOKEN=your-mailerlite-api-token"
+fi
+
+echo ""
+
 # Check if Java 21 is installed
 if command -v java &> /dev/null; then
     JAVA_VERSION=$(java -version 2>&1 | head -n 1 | cut -d'"' -f2 | cut -d'.' -f1)
@@ -21,7 +45,7 @@ else
 fi
 
 # Check if Maven is installed
-if command -v mvn &> /dev/null; then
+if command -v ./mvnw &> /dev/null; then
     echo "✅ Maven detected"
 else
     echo "❌ Maven not found. Please install Maven 3.6 or later."
@@ -29,25 +53,20 @@ else
 fi
 
 echo ""
-echo "📦 Building application..."
-mvn clean package -DskipTests
-
-if [ $? -eq 0 ]; then
-    echo "✅ Build successful"
-else
-    echo "❌ Build failed"
-    exit 1
-fi
 
 echo ""
 echo "🔥 Starting application on http://localhost:8080"
 echo ""
 echo "📋 Once the application starts:"
 echo "   1. Open http://localhost:8080 in your browser"
-echo "   2. Enter your Mailchimp API key and MailerLite API token"
+if [ -z "$MAILCHIMP_API_KEY" ] || [ -z "$MAILERLITE_API_TOKEN" ]; then
+    echo "   2. Enter your Mailchimp API key and MailerLite API token"
+else
+    echo "   2. Your API keys are pre-configured from .env file"
+fi
 echo "   3. Follow the migration wizard"
 echo ""
 echo "💡 To stop the application, press Ctrl+C"
 echo ""
 
-java -jar target/mailchimp-to-mailerlite-migrator-0.0.1-SNAPSHOT.jar
+./mvnw spring-boot:run

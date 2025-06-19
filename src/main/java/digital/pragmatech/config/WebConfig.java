@@ -8,13 +8,22 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.time.Duration;
 
 @Configuration
 @EnableAsync
 @EnableScheduling
-public class WebConfig {
+public class WebConfig implements WebMvcConfigurer {
+    
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        registry.addResourceHandler("/webjars/**")
+                .addResourceLocations("/webjars/")
+                .resourceChain(false);
+    }
     
     @Bean
     public RestClient.Builder restClientBuilder() {
@@ -33,7 +42,7 @@ public class WebConfig {
     @Bean
     public RestClientCustomizer restClientCustomizer() {
         return restClientBuilder -> restClientBuilder
-                .defaultHeader("User-Agent", "MailchimpToMailerLiteMigrator/1.0")
+                .defaultHeader("User-Agent", "M2M-Migrator/1.0")
                 .defaultHeader("Accept", "application/json")
                 .defaultHeader("Content-Type", "application/json");
     }

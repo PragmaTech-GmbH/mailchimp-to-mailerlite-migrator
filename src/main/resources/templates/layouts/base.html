@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:fragment="layout(title, activePage, content, scripts)">
+<head th:replace="~{fragments/head :: head(${title})}">
+    <title>Default Title</title>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+    <!-- Header -->
+    <div th:replace="~{fragments/header :: header(${activePage})}"></div>
+    
+    <!-- Main Content -->
+    <main class="flex-grow">
+        <div class="container mx-auto px-4 py-8">
+            <!-- Content will be inserted here -->
+            <div th:replace="${content}">
+                <p>Default content</p>
+            </div>
+        </div>
+    </main>
+    
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-6 mt-auto">
+        <div class="container mx-auto px-4 text-center">
+            <p class="text-sm opacity-75">
+                &copy; <span th:text="${#dates.year(#dates.createNow())}">2024</span> Mailchimp to MailerLite Migrator. 
+                Built with Spring Boot and Thymeleaf.
+            </p>
+        </div>
+    </footer>
+    
+    <!-- Page-specific scripts -->
+    <div th:replace="${scripts}">
+        <!-- Default: no additional scripts -->
+    </div>
+</body>
+</html>

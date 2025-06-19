@@ -55,21 +55,40 @@
 			<artifactId>spring-boot-configuration-processor</artifactId>
 			<optional>true</optional>
 		</dependency>
-		
+
 		<!-- Lombok for reducing boilerplate -->
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
 			<scope>provided</scope>
 		</dependency>
-		
-		<!-- WebJars for Tailwind CSS -->
+
+		<!-- WebJars dependencies -->
 		<dependency>
 			<groupId>org.webjars.npm</groupId>
 			<artifactId>htmx.org</artifactId>
 			<version>1.9.12</version>
 		</dependency>
-		
+		<dependency>
+			<groupId>org.webjars</groupId>
+			<artifactId>webjars-locator-core</artifactId>
+		</dependency>
+    <dependency>
+      <groupId>org.webjars.npm</groupId>
+      <artifactId>tailwindcss</artifactId>
+      <version>4.1.8</version>
+    </dependency>
+		<dependency>
+			<groupId>org.webjars</groupId>
+			<artifactId>sockjs-client</artifactId>
+			<version>1.5.1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.webjars</groupId>
+			<artifactId>stomp-websocket</artifactId>
+			<version>2.3.4</version>
+		</dependency>
+
 		<!-- Test dependencies -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -103,7 +122,7 @@
 					</excludes>
 				</configuration>
 			</plugin>
-			
+
 			<!-- Surefire Plugin for Unit Tests -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -119,7 +138,7 @@
 					</excludes>
 				</configuration>
 			</plugin>
-			
+
 			<!-- Failsafe Plugin for Integration Tests -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -140,7 +159,7 @@
 					</execution>
 				</executions>
 			</plugin>
-			
+
 			<!-- JaCoCo Plugin for Code Coverage -->
 			<plugin>
 				<groupId>org.jacoco</groupId>
@@ -181,7 +200,7 @@
 					</execution>
 				</executions>
 			</plugin>
-			
+
 			<!-- OWASP Dependency Check Plugin -->
 			<plugin>
 				<groupId>org.owasp</groupId>
@@ -194,7 +213,7 @@
 					</suppressionFiles>
 				</configuration>
 			</plugin>
-			
+
 			<!-- Spotless Plugin for Code Formatting -->
 			<plugin>
 				<groupId>com.diffplug.spotless</groupId>

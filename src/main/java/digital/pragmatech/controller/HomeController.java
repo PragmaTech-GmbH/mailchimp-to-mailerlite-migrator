@@ -3,6 +3,7 @@ package digital.pragmatech.controller;
 import digital.pragmatech.config.ApiConfiguration;
 import digital.pragmatech.dto.request.ApiKeysRequest;
 import digital.pragmatech.dto.response.ApiResponse;
+import digital.pragmatech.service.mailchimp.MailchimpService;
 import digital.pragmatech.service.migration.MigrationValidator;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +14,9 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Controller
@@ -22,18 +25,37 @@ public class HomeController {
     
     private final ApiConfiguration apiConfiguration;
     private final MigrationValidator migrationValidator;
+    private final MailchimpService mailchimpService;
     
     @GetMapping("/")
     public String index(Model model) {
-        model.addAttribute("apiKeysRequest", new ApiKeysRequest());
+        // Initialize API keys request with defaults if available
+        ApiKeysRequest request = new ApiKeysRequest();
+        if (apiConfiguration.getMailchimp().getDefaultApiKey() != null && 
+            !apiConfiguration.getMailchimp().getDefaultApiKey().isEmpty()) {
+            request.setMailchimpApiKey(apiConfiguration.getMailchimp().getDefaultApiKey());
+            // Auto-configure from environment variable
+            apiConfiguration.getMailchimp().setApiKey(apiConfiguration.getMailchimp().getDefaultApiKey());
+        }
+        if (apiConfiguration.getMailerlite().getDefaultApiToken() != null && 
+            !apiConfiguration.getMailerlite().getDefaultApiToken().isEmpty()) {
+            request.setMailerLiteApiToken(apiConfiguration.getMailerlite().getDefaultApiToken());
+            // Auto-configure from environment variable
+            apiConfiguration.getMailerlite().setApiToken(apiConfiguration.getMailerlite().getDefaultApiToken());
+        }
+        
+        model.addAttribute("apiKeysRequest", request);
         
         // Check if API keys are already configured
-        boolean hasMailchimpKey = apiConfiguration.getMailchimp().getApiKey() != null;
-        boolean hasMailerLiteToken = apiConfiguration.getMailerlite().getApiToken() != null;
+        boolean hasMailchimpKey = apiConfiguration.getMailchimp().getApiKey() != null && 
+                                 !apiConfiguration.getMailchimp().getApiKey().isEmpty();
+        boolean hasMailerLiteToken = apiConfiguration.getMailerlite().getApiToken() != null && 
+                                    !apiConfiguration.getMailerlite().getApiToken().isEmpty();
         
         model.addAttribute("hasMailchimpKey", hasMailchimpKey);
         model.addAttribute("hasMailerLiteToken", hasMailerLiteToken);
         model.addAttribute("canProceed", hasMailchimpKey && hasMailerLiteToken);
+        model.addAttribute("preConfigured", hasMailchimpKey && hasMailerLiteToken);
         
         return "index";
     }
@@ -89,6 +111,29 @@ public class HomeController {
                     log.error("Pre-migration analysis failed", throwable);
                     return ApiResponse.<MigrationValidator.PreMigrationAnalysis>error("Analysis failed: " + throwable.getMessage());
                 });
+    }
+    
+    @GetMapping("/api/tags")
+    @ResponseBody
+    public CompletableFuture<ApiResponse<Map<String, List<String>>>> getMailchimpTags() {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                // Get all lists
+                var lists = mailchimpService.getAllLists();
+                Map<String, List<String>> tagsByList = new HashMap<>();
+                
+                for (var list : lists) {
+                    List<String> tags = mailchimpService.getAllTags(list.getId());
+                    tagsByList.put(list.getName(), tags);
+                }
+                
+                return ApiResponse.success("Tags fetched successfully", tagsByList);
+                
+            } catch (Exception e) {
+                log.error("Failed to fetch Mailchimp tags", e);
+                return ApiResponse.error("Failed to fetch tags: " + e.getMessage());
+            }
+        });
     }
     
     @GetMapping("/dashboard")

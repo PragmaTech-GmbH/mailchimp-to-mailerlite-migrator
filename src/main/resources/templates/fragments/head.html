@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="head(title)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${title} + ' - Mailchimp to MailerLite Migrator'">Mailchimp to MailerLite Migrator</title>
+    
+    <!-- Since Tailwind v4 is in alpha and doesn't have a traditional CSS file, 
+         we'll use the CDN for now which provides v3 functionality -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Configure Tailwind -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#3B82F6',
+                        'secondary': '#10B981'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+</html>

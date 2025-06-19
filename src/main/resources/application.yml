@@ -1,12 +1,12 @@
 spring:
   application:
     name: mailchimp-to-mailerlite-migrator
-  
+
   thymeleaf:
     cache: false
     mode: HTML
     encoding: UTF-8
-    
+
   task:
     execution:
       pool:
@@ -28,8 +28,6 @@ logging:
     digital.pragmatech: DEBUG
     org.springframework.web: INFO
     org.springframework.web.client.RestClient: DEBUG
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
 
 migration:
   batch-size: 500
@@ -42,25 +40,21 @@ migration:
       timeout: 120000
     mailerlite:
       requests-per-minute: 120
-  
+
 api:
   mailchimp:
     base-url: https://{datacenter}.api.mailchimp.com/3.0
+    default-api-key: ${MAILCHIMP_API_KEY:}
   mailerlite:
     base-url: https://connect.mailerlite.com/api
+    default-api-token: ${MAILERLITE_API_TOKEN:}
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,prometheus
+        include: health,info
       base-path: /actuator
-  endpoint:
-    health:
-      show-details: always
-      show-components: always
-    metrics:
-      enabled: true
   info:
     build:
       enabled: true

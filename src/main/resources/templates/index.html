@@ -1,28 +1,24 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layouts/base :: layout(~{::title}, 'home', ~{::content}, ~{::scripts})}">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mailchimp to MailerLite Migrator</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <title>Setup</title>
 </head>
-<body class="bg-gray-50 min-h-screen">
-    <div class="container mx-auto px-4 py-8 max-w-2xl">
-        <!-- Header -->
-        <div class="text-center mb-8">
-            <h1 class="text-4xl font-bold text-gray-900 mb-2">Mailchimp to MailerLite Migrator</h1>
-            <p class="text-lg text-gray-600">Seamlessly migrate your email marketing data</p>
-        </div>
-
+<body>
+    <div th:fragment="content" class="max-w-2xl mx-auto">
         <!-- Error/Success Messages -->
-        <div th:if="${param.error}" class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
-            <span th:if="${param.error[0] == 'api-keys-required'}">API keys are required to proceed</span>
-            <span th:if="${param.error[0] == 'validation'}">Please fix the validation errors</span>
-            <span th:if="${param.error[0] == 'configuration'}">Failed to configure API keys</span>
+        <div th:if="${param.error}">
+            <div th:if="${param.error[0] == 'api-keys-required'}" 
+                 th:replace="~{fragments/messages :: error('API keys are required to proceed')}"></div>
+            <div th:if="${param.error[0] == 'validation'}" 
+                 th:replace="~{fragments/messages :: error('Please fix the validation errors')}"></div>
+            <div th:if="${param.error[0] == 'configuration'}" 
+                 th:replace="~{fragments/messages :: error('Failed to configure API keys')}"></div>
         </div>
 
-        <div th:if="${success}" class="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded" th:text="${success}"></div>
+        <div th:if="${success}" th:replace="~{fragments/messages :: success(${success})}"></div>
+        
+        <!-- Pre-configured message -->
+        <div th:if="${preConfigured}" th:replace="~{fragments/messages :: info('API keys are pre-configured from environment variables. You can proceed directly to validation.')}"></div>
 
         <!-- API Configuration Form -->
         <div class="bg-white rounded-lg shadow-md p-6 mb-6">
@@ -107,98 +103,191 @@
                 <!-- Dynamic content will be inserted here -->
             </div>
         </div>
+
+        <!-- Tags Panel -->
+        <div th:if="${canProceed}" id="tags-panel" class="bg-white rounded-lg shadow-md p-6 mt-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-semibold text-gray-800">Mailchimp Tags & Segments</h3>
+                <button id="fetch-tags-btn" 
+                        class="bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition duration-200"
+                        onclick="fetchMailchimpTags()">
+                    <span id="fetch-tags-text">Load Tags</span>
+                </button>
+            </div>
+            <div id="tags-content">
+                <p class="text-gray-600">Click "Load Tags" to fetch all tags and segments from your Mailchimp lists.</p>
+            </div>
+        </div>
     </div>
 
-    <script>
-        function validateConnections() {
-            const btn = document.getElementById('validate-btn');
-            const status = document.getElementById('validation-status');
-            
-            btn.disabled = true;
-            btn.textContent = 'Validating...';
-            status.className = 'mb-4 p-4 bg-blue-100 border border-blue-400 text-blue-700 rounded';
-            status.innerHTML = 'Testing API connections...';
-            status.classList.remove('hidden');
-            
-            fetch('/api/validate', { method: 'POST' })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        status.className = 'mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded';
-                        status.innerHTML = '✅ API connections validated successfully!';
-                        document.getElementById('analyze-btn').classList.remove('hidden');
-                    } else {
-                        status.className = 'mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded';
-                        status.innerHTML = '❌ Validation failed: ' + (data.message || 'Unknown error');
-                        if (data.data && data.data.errors) {
-                            status.innerHTML += '<ul class="mt-2">';
-                            data.data.errors.forEach(error => {
-                                status.innerHTML += '<li>• ' + error + '</li>';
-                            });
-                            status.innerHTML += '</ul>';
-                        }
-                    }
-                })
-                .catch(error => {
-                    status.className = 'mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded';
-                    status.innerHTML = '❌ Connection test failed: ' + error.message;
-                })
-                .finally(() => {
-                    btn.disabled = false;
-                    btn.textContent = 'Test Connections';
-                });
-        }
+    <div th:fragment="scripts">
+        <!-- HTMX from Webjars -->
+        <script th:src="@{/webjars/htmx.org/1.9.12/dist/htmx.min.js}"></script>
         
-        function analyzeForMigration() {
-            const btn = document.getElementById('analyze-btn');
-            const results = document.getElementById('analysis-results');
-            const content = document.getElementById('analysis-content');
+        <script>
+            function validateConnections() {
+                const btn = document.getElementById('validate-btn');
+                const status = document.getElementById('validation-status');
+                
+                btn.disabled = true;
+                btn.textContent = 'Validating...';
+                status.className = 'mb-4 p-4 bg-blue-100 border border-blue-400 text-blue-700 rounded';
+                status.innerHTML = 'Testing API connections...';
+                status.classList.remove('hidden');
+                
+                fetch('/api/validate', { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            status.className = 'mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded';
+                            status.innerHTML = '✅ API connections validated successfully!';
+                            document.getElementById('analyze-btn').classList.remove('hidden');
+                            showTagsPanel();
+                        } else {
+                            status.className = 'mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded';
+                            status.innerHTML = '❌ Validation failed: ' + (data.message || 'Unknown error');
+                            if (data.data && data.data.errors) {
+                                status.innerHTML += '<ul class="mt-2">';
+                                data.data.errors.forEach(error => {
+                                    status.innerHTML += '<li>• ' + error + '</li>';
+                                });
+                                status.innerHTML += '</ul>';
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        status.className = 'mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded';
+                        status.innerHTML = '❌ Connection test failed: ' + error.message;
+                    })
+                    .finally(() => {
+                        btn.disabled = false;
+                        btn.textContent = 'Test Connections';
+                    });
+            }
             
-            btn.disabled = true;
-            btn.textContent = 'Analyzing...';
-            results.classList.remove('hidden');
-            content.innerHTML = '<div class="text-blue-600">🔍 Analyzing your Mailchimp data...</div>';
+            function analyzeForMigration() {
+                const btn = document.getElementById('analyze-btn');
+                const results = document.getElementById('analysis-results');
+                const content = document.getElementById('analysis-content');
+                
+                btn.disabled = true;
+                btn.textContent = 'Analyzing...';
+                results.classList.remove('hidden');
+                content.innerHTML = '<div class="text-blue-600">🔍 Analyzing your Mailchimp data...</div>';
+                
+                fetch('/api/analyze', { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.data) {
+                            const analysis = data.data;
+                            content.innerHTML = `
+                                <div class="grid grid-cols-2 gap-4 mb-4">
+                                    <div class="bg-gray-50 p-3 rounded">
+                                        <div class="text-2xl font-bold text-blue-600">${analysis.totalSubscribers}</div>
+                                        <div class="text-sm text-gray-600">Total Subscribers</div>
+                                    </div>
+                                    <div class="bg-gray-50 p-3 rounded">
+                                        <div class="text-2xl font-bold text-green-600">${analysis.totalTags}</div>
+                                        <div class="text-sm text-gray-600">Tags to Migrate</div>
+                                    </div>
+                                    <div class="bg-gray-50 p-3 rounded">
+                                        <div class="text-2xl font-bold text-purple-600">${analysis.totalLists}</div>
+                                        <div class="text-sm text-gray-600">Mailchimp Lists</div>
+                                    </div>
+                                    <div class="bg-gray-50 p-3 rounded">
+                                        <div class="text-2xl font-bold text-orange-600">${analysis.estimatedMigrationTimeMinutes}</div>
+                                        <div class="text-sm text-gray-600">Est. Minutes</div>
+                                    </div>
+                                </div>
+                                <div class="bg-green-50 border border-green-200 rounded p-4">
+                                    <p class="text-green-800">✅ Ready for migration! Your data looks good to go.</p>
+                                </div>
+                            `;
+                        } else {
+                            content.innerHTML = `<div class="text-red-600">❌ Analysis failed: ${data.message || 'Unknown error'}</div>`;
+                        }
+                    })
+                    .catch(error => {
+                        content.innerHTML = `<div class="text-red-600">❌ Analysis failed: ${error.message}</div>`;
+                    })
+                    .finally(() => {
+                        btn.disabled = false;
+                        btn.textContent = 'Analyze Data';
+                    });
+            }
             
-            fetch('/api/analyze', { method: 'POST' })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success && data.data) {
-                        const analysis = data.data;
-                        content.innerHTML = `
-                            <div class="grid grid-cols-2 gap-4 mb-4">
-                                <div class="bg-gray-50 p-3 rounded">
-                                    <div class="text-2xl font-bold text-blue-600">${analysis.totalSubscribers}</div>
-                                    <div class="text-sm text-gray-600">Total Subscribers</div>
-                                </div>
-                                <div class="bg-gray-50 p-3 rounded">
-                                    <div class="text-2xl font-bold text-green-600">${analysis.totalTags}</div>
-                                    <div class="text-sm text-gray-600">Tags to Migrate</div>
-                                </div>
-                                <div class="bg-gray-50 p-3 rounded">
-                                    <div class="text-2xl font-bold text-purple-600">${analysis.totalLists}</div>
-                                    <div class="text-sm text-gray-600">Mailchimp Lists</div>
-                                </div>
-                                <div class="bg-gray-50 p-3 rounded">
-                                    <div class="text-2xl font-bold text-orange-600">${analysis.estimatedMigrationTimeMinutes}</div>
-                                    <div class="text-sm text-gray-600">Est. Minutes</div>
-                                </div>
-                            </div>
-                            <div class="bg-green-50 border border-green-200 rounded p-4">
-                                <p class="text-green-800">✅ Ready for migration! Your data looks good to go.</p>
-                            </div>
-                        `;
-                    } else {
-                        content.innerHTML = `<div class="text-red-600">❌ Analysis failed: ${data.message || 'Unknown error'}</div>`;
-                    }
-                })
-                .catch(error => {
-                    content.innerHTML = `<div class="text-red-600">❌ Analysis failed: ${error.message}</div>`;
-                })
-                .finally(() => {
-                    btn.disabled = false;
-                    btn.textContent = 'Analyze Data';
-                });
-        }
-    </script>
+            function fetchMailchimpTags() {
+                const btn = document.getElementById('fetch-tags-btn');
+                const btnText = document.getElementById('fetch-tags-text');
+                const content = document.getElementById('tags-content');
+                
+                btn.disabled = true;
+                btnText.textContent = 'Loading...';
+                content.innerHTML = '<div class="text-blue-600">🔄 Fetching tags from Mailchimp...</div>';
+                
+                fetch('/api/tags')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.data) {
+                            const tagsByList = data.data;
+                            let html = '';
+                            
+                            if (Object.keys(tagsByList).length === 0) {
+                                html = '<p class="text-gray-600">No lists found in your Mailchimp account.</p>';
+                            } else {
+                                html = '<div class="space-y-4">';
+                                
+                                for (const [listName, tags] of Object.entries(tagsByList)) {
+                                    html += `
+                                        <div class="border-l-4 border-blue-500 pl-4">
+                                            <h4 class="font-semibold text-lg text-gray-800 mb-2">${listName}</h4>
+                                            ${tags.length > 0 ? `
+                                                <div class="flex flex-wrap gap-2">
+                                                    ${tags.map(tag => `
+                                                        <span class="inline-block bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm">
+                                                            ${tag}
+                                                        </span>
+                                                    `).join('')}
+                                                </div>
+                                            ` : '<p class="text-gray-500 text-sm">No tags found for this list</p>'}
+                                        </div>
+                                    `;
+                                }
+                                
+                                html += '</div>';
+                                
+                                // Add summary
+                                const totalTags = Object.values(tagsByList).flat().length;
+                                const totalLists = Object.keys(tagsByList).length;
+                                html += `
+                                    <div class="mt-6 pt-4 border-t border-gray-200">
+                                        <p class="text-sm text-gray-600">
+                                            Found <span class="font-semibold">${totalTags}</span> tags across 
+                                            <span class="font-semibold">${totalLists}</span> list${totalLists !== 1 ? 's' : ''}.
+                                        </p>
+                                    </div>
+                                `;
+                            }
+                            
+                            content.innerHTML = html;
+                        } else {
+                            content.innerHTML = `<div class="text-red-600">❌ Failed to fetch tags: ${data.message || 'Unknown error'}</div>`;
+                        }
+                    })
+                    .catch(error => {
+                        content.innerHTML = `<div class="text-red-600">❌ Error fetching tags: ${error.message}</div>`;
+                    })
+                    .finally(() => {
+                        btn.disabled = false;
+                        btnText.textContent = 'Refresh Tags';
+                    });
+            }
+            
+            // Show tags panel when connections are validated
+            function showTagsPanel() {
+                document.getElementById('tags-panel').classList.remove('hidden');
+            }
+        </script>
+    </div>
 </body>
 </html>
