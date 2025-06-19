@@ -90,10 +90,19 @@ The application supports pre-configuring API keys via environment variables:
 ### Testing Strategy
 
 - **Unit Tests**: Standard JUnit tests for individual components
+- **Web Layer Tests**: Use `@WebMvcTest` with HtmlUnit for controller testing
 - **Integration Tests**: Use WireMock to mock external API calls
 - **Test Separation**: 
   - Unit tests: `*Test.java`, `*Tests.java` (run by Surefire)
   - Integration tests: `*IntegrationTest.java`, `*IT.java` (run by Failsafe)
+
+### Controller Testing with HtmlUnit
+
+The project includes comprehensive controller tests using `@WebMvcTest` and HtmlUnit:
+- **Form validation testing**: Tests HTML form submissions and validations
+- **JavaScript-enabled testing**: Tests dynamic UI interactions
+- **Graceful degradation**: Tests functionality without JavaScript
+- **Error handling**: Tests various error scenarios and user feedback
 
 ### Configuration
 
