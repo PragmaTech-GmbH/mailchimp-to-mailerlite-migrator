@@ -5,10 +5,10 @@ import lombok.Data;
 
 @Data
 public class ApiKeysRequest {
-    
-    @NotBlank(message = "Mailchimp API key is required")
-    private String mailchimpApiKey;
-    
-    @NotBlank(message = "MailerLite API token is required")
-    private String mailerLiteApiToken;
+
+  @NotBlank(message = "Mailchimp API key is required")
+  private String mailchimpApiKey;
+
+  @NotBlank(message = "MailerLite API token is required")
+  private String mailerLiteApiToken;
 }

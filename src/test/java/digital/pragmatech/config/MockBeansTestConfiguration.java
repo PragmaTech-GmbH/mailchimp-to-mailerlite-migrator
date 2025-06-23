@@ -10,15 +10,15 @@ import org.springframework.context.annotation.Primary;
 @TestConfiguration
 public class MockBeansTestConfiguration {
 
-    @Bean
-    @Primary
-    public MailchimpApiClient mockMailchimpApiClient() {
-        return Mockito.mock(MailchimpApiClient.class);
-    }
+  @Bean
+  @Primary
+  public MailchimpApiClient mockMailchimpApiClient() {
+    return Mockito.mock(MailchimpApiClient.class);
+  }
 
-    @Bean
-    @Primary
-    public MailerLiteApiClient mockMailerLiteApiClient() {
-        return Mockito.mock(MailerLiteApiClient.class);
-    }
+  @Bean
+  @Primary
+  public MailerLiteApiClient mockMailerLiteApiClient() {
+    return Mockito.mock(MailerLiteApiClient.class);
+  }
 }
