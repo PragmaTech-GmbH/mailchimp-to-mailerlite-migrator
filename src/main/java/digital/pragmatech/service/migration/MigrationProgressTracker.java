@@ -13,6 +13,7 @@ public class MigrationProgressTracker {
 
   private final AtomicReference<MigrationStatus> currentMigrationStatus = new AtomicReference<>();
   private final ConcurrentHashMap<String, Object> metrics = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, Object> stepResults = new ConcurrentHashMap<>();
 
   public void initializeMigration(String migrationId) {
     MigrationStatus status =
@@ -247,6 +248,22 @@ public class MigrationProgressTracker {
 
   public Object getMetric(String key) {
     return metrics.get(key);
+  }
+
+  public void setStepResult(String step, Object result) {
+    stepResults.put(step, result);
+  }
+
+  public Object getStepResult(String step) {
+    return stepResults.get(step);
+  }
+
+  public ConcurrentHashMap<String, Object> getAllStepResults() {
+    return new ConcurrentHashMap<>(stepResults);
+  }
+
+  public void clearStepResults() {
+    stepResults.clear();
   }
 
   private void broadcastUpdate() {

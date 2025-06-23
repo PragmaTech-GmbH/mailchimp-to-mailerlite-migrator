@@ -109,6 +109,7 @@
                 </button>
                 
                 <div id="tags-result" class="mt-4 hidden"></div>
+                <div id="tag-migration-result" class="mt-4 hidden"></div>
             </div>
 
             <!-- Step 4: Ecommerce Store Selection -->
@@ -138,6 +139,7 @@
                 </button>
                 
                 <div id="stores-result" class="mt-4 hidden"></div>
+                <div id="store-migration-result" class="mt-4 hidden"></div>
             </div>
 
             <!-- Step 5: Subscriber Migration -->
@@ -150,6 +152,7 @@
                 </button>
                 
                 <div id="subscribers-result" class="mt-4 hidden"></div>
+                <div id="subscriber-migration-result" class="mt-4 hidden"></div>
             </div>
 
             <!-- Step 6: Order Sync -->
@@ -162,6 +165,7 @@
                 </button>
                 
                 <div id="orders-result" class="mt-4 hidden"></div>
+                <div id="order-sync-result" class="mt-4 hidden"></div>
             </div>
         </div>
 
@@ -349,19 +353,55 @@
                 fetch('/api/validate', { method: 'POST' })
                     .then(response => response.json())
                     .then(data => {
-                        if (data.success) {
+                        if (data.success && data.data) {
                             migrationData.validationResult = data.data;
-                            result.className = 'mt-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded';
-                            result.innerHTML = '✅ API connections validated successfully!';
+                            const validation = data.data;
                             
-                            // Update connection status indicators
-                            updateConnectionStatus(true, true);
+                            // Update connection status indicators with individual results
+                            updateConnectionStatus(validation.mailchimpValid, validation.mailerLiteValid);
                             
-                            // Enable next step
-                            document.getElementById('next-step-btn').classList.remove('hidden');
+                            if (validation.valid) {
+                                // Both APIs are valid
+                                result.className = 'mt-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded';
+                                result.innerHTML = '✅ All API connections validated successfully!';
+                                
+                                // Enable next step
+                                document.getElementById('next-step-btn').classList.remove('hidden');
+                            } else if (validation.mailchimpValid || validation.mailerLiteValid) {
+                                // At least one API is valid
+                                result.className = 'mt-4 p-4 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded';
+                                let message = '⚠️ Partial validation success:<br>';
+                                if (validation.mailchimpValid) {
+                                    message += '✅ Mailchimp API: Connected<br>';
+                                }
+                                if (validation.mailerLiteValid) {
+                                    message += '✅ MailerLite API: Connected<br>';
+                                }
+                                if (validation.errors && validation.errors.length > 0) {
+                                    message += '<br>❌ Issues:<br>';
+                                    validation.errors.forEach(error => {
+                                        message += `• ${error}<br>`;
+                                    });
+                                }
+                                result.innerHTML = message;
+                                
+                                // Enable next step if at least one API works
+                                document.getElementById('next-step-btn').classList.remove('hidden');
+                            } else {
+                                // Both APIs failed
+                                result.className = 'mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded';
+                                let message = '❌ All API connections failed:<br>';
+                                if (validation.errors && validation.errors.length > 0) {
+                                    validation.errors.forEach(error => {
+                                        message += `• ${error}<br>`;
+                                    });
+                                }
+                                result.innerHTML = message;
+                            }
                         } else {
                             result.className = 'mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded';
                             result.innerHTML = '❌ Validation failed: ' + (data.message || 'Unknown error');
+                            updateConnectionStatus(false, false);
                         }
                     })
                     .catch(error => {
@@ -537,13 +577,13 @@
                 migrationData.selectedTags = selectedTags;
                 
                 const btn = document.getElementById('migrate-tags-btn');
-                const result = document.getElementById('tags-result');
+                const resultDiv = document.getElementById('tag-migration-result');
                 
                 btn.disabled = true;
                 btn.textContent = 'Migrating...';
-                result.className = 'mt-4 p-4 bg-blue-100 border border-blue-400 text-blue-700 rounded';
-                result.innerHTML = `🔄 Migrating ${selectedTags.length} tags to MailerLite as groups...`;
-                result.classList.remove('hidden');
+                resultDiv.className = 'mt-4 p-4 bg-blue-100 border border-blue-400 text-blue-700 rounded';
+                resultDiv.innerHTML = `🔄 Migrating ${selectedTags.length} tags to MailerLite as groups...`;
+                resultDiv.classList.remove('hidden');
                 
                 fetch('/api/migration/migrate-tags', {
                     method: 'POST',
@@ -552,20 +592,33 @@
                 })
                     .then(response => response.json())
                     .then(data => {
-                        if (data.success) {
-                            result.className = 'mt-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded';
-                            result.innerHTML = `✅ Successfully migrated ${selectedTags.length} tags as groups to MailerLite!`;
+                        if (data.success && data.data) {
+                            const result = data.data;
+                            resultDiv.className = 'mt-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded';
+                            resultDiv.innerHTML = `
+                                <h4 class="font-semibold mb-2">✅ Tag Migration Complete</h4>
+                                <div class="text-sm space-y-1">
+                                    <p><strong>Total Tags:</strong> ${result.totalTags}</p>
+                                    <p><strong>Successfully Created:</strong> ${result.successfulTags}</p>
+                                    <p><strong>Failed:</strong> ${result.failedTags}</p>
+                                    ${result.createdGroups && result.createdGroups.length > 0 ? 
+                                        `<p><strong>Created Groups:</strong> ${result.createdGroups.join(', ')}</p>` : ''}
+                                    ${result.failedTags && result.failedTags.length > 0 ? 
+                                        `<p class="text-red-600"><strong>Failed Tags:</strong> ${result.failedTags.join(', ')}</p>` : ''}
+                                    <p class="text-gray-600">Completed at: ${new Date(result.completedAt).toLocaleString()}</p>
+                                </div>
+                            `;
                             
                             // Enable next step
                             document.getElementById('next-step-btn').classList.remove('hidden');
                         } else {
-                            result.className = 'mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded';
-                            result.innerHTML = `❌ Failed to migrate tags: ${data.message || 'Unknown error'}`;
+                            resultDiv.className = 'mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded';
+                            resultDiv.innerHTML = `❌ Failed to migrate tags: ${data.message || 'Unknown error'}`;
                         }
                     })
                     .catch(error => {
-                        result.className = 'mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded';
-                        result.innerHTML = `❌ Error migrating tags: ${error.message}`;
+                        resultDiv.className = 'mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded';
+                        resultDiv.innerHTML = `❌ Error migrating tags: ${error.message}`;
                     })
                     .finally(() => {
                         btn.disabled = false;
@@ -671,13 +724,13 @@
                 migrationData.selectedStores = selectedStores;
                 
                 const btn = document.getElementById('migrate-stores-btn');
-                const result = document.getElementById('stores-result');
+                const resultDiv = document.getElementById('store-migration-result');
                 
                 btn.disabled = true;
                 btn.textContent = 'Migrating...';
-                result.className = 'mt-4 p-4 bg-blue-100 border border-blue-400 text-blue-700 rounded';
-                result.innerHTML = `🔄 Migrating ${selectedStores.length} stores to MailerLite...`;
-                result.classList.remove('hidden');
+                resultDiv.className = 'mt-4 p-4 bg-blue-100 border border-blue-400 text-blue-700 rounded';
+                resultDiv.innerHTML = `🔄 Migrating ${selectedStores.length} stores to MailerLite...`;
+                resultDiv.classList.remove('hidden');
                 
                 fetch('/api/migration/migrate-stores', {
                     method: 'POST',
@@ -686,20 +739,36 @@
                 })
                     .then(response => response.json())
                     .then(data => {
-                        if (data.success) {
-                            result.className = 'mt-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded';
-                            result.innerHTML = `✅ Successfully migrated ${selectedStores.length} stores to MailerLite!`;
+                        if (data.success && data.data) {
+                            const result = data.data;
+                            resultDiv.className = 'mt-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded';
+                            resultDiv.innerHTML = `
+                                <h4 class="font-semibold mb-2">✅ Store Migration Complete</h4>
+                                <div class="text-sm space-y-1">
+                                    <p><strong>Total Stores:</strong> ${result.totalStores}</p>
+                                    <p><strong>Successfully Migrated:</strong> ${result.successfulStores}</p>
+                                    <p><strong>Failed:</strong> ${result.failedStores}</p>
+                                    ${result.migratedStores && result.migratedStores.length > 0 ? 
+                                        `<p><strong>Migrated Stores:</strong> ${result.migratedStores.join(', ')}</p>` : ''}
+                                    ${result.failedStores && result.failedStores.length > 0 ? 
+                                        `<p class="text-red-600"><strong>Failed Stores:</strong> ${result.failedStores.join(', ')}</p>` : ''}
+                                    <p class="text-gray-600">Completed at: ${new Date(result.completedAt).toLocaleString()}</p>
+                                </div>
+                            `;
                             
                             // Enable next step
                             document.getElementById('next-step-btn').classList.remove('hidden');
                         } else {
-                            result.className = 'mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded';
-                            result.innerHTML = `❌ Failed to migrate stores: ${data.message || 'Unknown error'}`;
+                            resultDiv.className = 'mt-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded';
+                            resultDiv.innerHTML = `✅ ${data.message || 'No stores to migrate'}`;
+                            
+                            // Enable next step even if no stores
+                            document.getElementById('next-step-btn').classList.remove('hidden');
                         }
                     })
                     .catch(error => {
-                        result.className = 'mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded';
-                        result.innerHTML = `❌ Error migrating stores: ${error.message}`;
+                        resultDiv.className = 'mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded';
+                        resultDiv.innerHTML = `❌ Error migrating stores: ${error.message}`;
                     })
                     .finally(() => {
                         btn.disabled = false;
@@ -710,13 +779,13 @@
             // Step 5: Migrate subscribers
             function migrateSubscribers() {
                 const btn = document.getElementById('migrate-subscribers-btn');
-                const result = document.getElementById('subscribers-result');
+                const resultDiv = document.getElementById('subscriber-migration-result');
                 
                 btn.disabled = true;
                 btn.textContent = 'Migrating...';
-                result.className = 'mt-4 p-4 bg-blue-100 border border-blue-400 text-blue-700 rounded';
-                result.innerHTML = '🔄 Migrating subscribers from Mailchimp to MailerLite...';
-                result.classList.remove('hidden');
+                resultDiv.className = 'mt-4 p-4 bg-blue-100 border border-blue-400 text-blue-700 rounded';
+                resultDiv.innerHTML = '🔄 Migrating subscribers from Mailchimp to MailerLite...';
+                resultDiv.classList.remove('hidden');
                 
                 fetch('/api/migration/migrate-subscribers', {
                     method: 'POST',
@@ -728,20 +797,32 @@
                 })
                     .then(response => response.json())
                     .then(data => {
-                        if (data.success) {
-                            result.className = 'mt-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded';
-                            result.innerHTML = `✅ Successfully migrated subscribers to MailerLite!`;
+                        if (data.success && data.data) {
+                            const result = data.data;
+                            resultDiv.className = 'mt-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded';
+                            resultDiv.innerHTML = `
+                                <h4 class="font-semibold mb-2">✅ Subscriber Migration Complete</h4>
+                                <div class="text-sm space-y-1">
+                                    <p><strong>Total Subscribers:</strong> ${result.totalSubscribers}</p>
+                                    <p><strong>Successfully Migrated:</strong> ${result.migratedSubscribers}</p>
+                                    <p><strong>Failed:</strong> ${result.failedSubscribers}</p>
+                                    <p><strong>Processed Lists:</strong> ${result.processedLists ? result.processedLists.join(', ') : 'None'}</p>
+                                    <p><strong>Selected Tags Applied:</strong> ${result.selectedTags ? result.selectedTags.length : 0}</p>
+                                    <p><strong>Groups Mapped:</strong> ${result.groupsMapped}</p>
+                                    <p class="text-gray-600">Completed at: ${new Date(result.completedAt).toLocaleString()}</p>
+                                </div>
+                            `;
                             
                             // Enable next step
                             document.getElementById('next-step-btn').classList.remove('hidden');
                         } else {
-                            result.className = 'mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded';
-                            result.innerHTML = `❌ Failed to migrate subscribers: ${data.message || 'Unknown error'}`;
+                            resultDiv.className = 'mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded';
+                            resultDiv.innerHTML = `❌ Failed to migrate subscribers: ${data.message || 'Unknown error'}`;
                         }
                     })
                     .catch(error => {
-                        result.className = 'mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded';
-                        result.innerHTML = `❌ Error migrating subscribers: ${error.message}`;
+                        resultDiv.className = 'mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded';
+                        resultDiv.innerHTML = `❌ Error migrating subscribers: ${error.message}`;
                     })
                     .finally(() => {
                         btn.disabled = false;
@@ -752,13 +833,13 @@
             // Step 6: Sync orders
             function syncOrders() {
                 const btn = document.getElementById('sync-orders-btn');
-                const result = document.getElementById('orders-result');
+                const resultDiv = document.getElementById('order-sync-result');
                 
                 btn.disabled = true;
                 btn.textContent = 'Syncing...';
-                result.className = 'mt-4 p-4 bg-blue-100 border border-blue-400 text-blue-700 rounded';
-                result.innerHTML = '🔄 Syncing orders from Mailchimp to MailerLite...';
-                result.classList.remove('hidden');
+                resultDiv.className = 'mt-4 p-4 bg-blue-100 border border-blue-400 text-blue-700 rounded';
+                resultDiv.innerHTML = '🔄 Syncing orders from Mailchimp to MailerLite...';
+                resultDiv.classList.remove('hidden');
                 
                 fetch('/api/migration/sync-orders', {
                     method: 'POST',
@@ -767,10 +848,23 @@
                 })
                     .then(response => response.json())
                     .then(data => {
-                        if (data.success) {
-                            result.className = 'mt-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded';
-                            result.innerHTML = `
-                                <div class="text-center">
+                        if (data.success && data.data) {
+                            const result = data.data;
+                            resultDiv.className = 'mt-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded';
+                            resultDiv.innerHTML = `
+                                <h4 class="font-semibold mb-2">✅ Order Sync Complete</h4>
+                                <div class="text-sm space-y-1">
+                                    <p><strong>Total Stores:</strong> ${result.totalStores}</p>
+                                    <p><strong>Processed Stores:</strong> ${result.processedStores}</p>
+                                    <p><strong>Total Orders:</strong> ${result.totalOrders}</p>
+                                    <p><strong>Successfully Synced:</strong> ${result.syncedOrders}</p>
+                                    <p><strong>Failed:</strong> ${result.failedOrders}</p>
+                                    ${result.processedStoresList && result.processedStoresList.length > 0 ? 
+                                        `<p><strong>Processed Stores:</strong> ${result.processedStoresList.join(', ')}</p>` : ''}
+                                    ${result.note ? `<p class="text-blue-600"><em>${result.note}</em></p>` : ''}
+                                    <p class="text-gray-600">Completed at: ${new Date(result.completedAt).toLocaleString()}</p>
+                                </div>
+                                <div class="text-center mt-4">
                                     <h3 class="text-lg font-semibold text-green-800 mb-2">🎉 Migration Complete!</h3>
                                     <p class="text-green-700">All data has been successfully migrated from Mailchimp to MailerLite.</p>
                                     <div class="mt-4">
@@ -781,13 +875,13 @@
                                 </div>
                             `;
                         } else {
-                            result.className = 'mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded';
-                            result.innerHTML = `❌ Failed to sync orders: ${data.message || 'Unknown error'}`;
+                            resultDiv.className = 'mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded';
+                            resultDiv.innerHTML = `❌ Failed to sync orders: ${data.message || 'Unknown error'}`;
                         }
                     })
                     .catch(error => {
-                        result.className = 'mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded';
-                        result.innerHTML = `❌ Error syncing orders: ${error.message}`;
+                        resultDiv.className = 'mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded';
+                        resultDiv.innerHTML = `❌ Error syncing orders: ${error.message}`;
                     })
                     .finally(() => {
                         btn.disabled = false;
@@ -817,8 +911,9 @@
                 fetch('/api/validate', { method: 'POST' })
                     .then(response => response.json())
                     .then(data => {
-                        if (data.success) {
-                            updateConnectionStatus(true, true);
+                        if (data.success && data.data) {
+                            const validation = data.data;
+                            updateConnectionStatus(validation.mailchimpValid, validation.mailerLiteValid);
                         } else {
                             updateConnectionStatus(false, false);
                         }

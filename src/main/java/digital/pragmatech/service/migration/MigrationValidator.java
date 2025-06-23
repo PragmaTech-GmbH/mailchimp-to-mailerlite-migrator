@@ -19,9 +19,12 @@ public class MigrationValidator {
 
   public ValidationResult validateApiConnections() {
     List<String> errors = new ArrayList<>();
+    boolean mailchimpValid = false;
+    boolean mailerLiteValid = false;
 
     try {
-      if (!mailchimpService.testConnection()) {
+      mailchimpValid = mailchimpService.testConnection();
+      if (!mailchimpValid) {
         errors.add("Failed to connect to Mailchimp API. Please check your API key.");
       }
     } catch (Exception e) {
@@ -30,7 +33,8 @@ public class MigrationValidator {
     }
 
     try {
-      if (!mailerLiteService.testConnection()) {
+      mailerLiteValid = mailerLiteService.testConnection();
+      if (!mailerLiteValid) {
         errors.add("Failed to connect to MailerLite API. Please check your API token.");
       }
     } catch (Exception e) {
@@ -40,6 +44,8 @@ public class MigrationValidator {
 
     return ValidationResult.builder()
         .valid(errors.isEmpty())
+        .mailchimpValid(mailchimpValid)
+        .mailerLiteValid(mailerLiteValid)
         .errors(errors)
         .validatedAt(LocalDateTime.now())
         .build();
@@ -98,11 +104,15 @@ public class MigrationValidator {
 
   public static class ValidationResult {
     private final boolean valid;
+    private final boolean mailchimpValid;
+    private final boolean mailerLiteValid;
     private final List<String> errors;
     private final LocalDateTime validatedAt;
 
-    private ValidationResult(boolean valid, List<String> errors, LocalDateTime validatedAt) {
+    private ValidationResult(boolean valid, boolean mailchimpValid, boolean mailerLiteValid, List<String> errors, LocalDateTime validatedAt) {
       this.valid = valid;
+      this.mailchimpValid = mailchimpValid;
+      this.mailerLiteValid = mailerLiteValid;
       this.errors = errors;
       this.validatedAt = validatedAt;
     }
@@ -115,6 +125,14 @@ public class MigrationValidator {
       return valid;
     }
 
+    public boolean isMailchimpValid() {
+      return mailchimpValid;
+    }
+
+    public boolean isMailerLiteValid() {
+      return mailerLiteValid;
+    }
+
     public List<String> getErrors() {
       return errors;
     }
@@ -125,11 +143,23 @@ public class MigrationValidator {
 
     public static class ValidationResultBuilder {
       private boolean valid;
+      private boolean mailchimpValid;
+      private boolean mailerLiteValid;
       private List<String> errors;
       private LocalDateTime validatedAt;
 
       public ValidationResultBuilder valid(boolean valid) {
         this.valid = valid;
+        return this;
+      }
+
+      public ValidationResultBuilder mailchimpValid(boolean mailchimpValid) {
+        this.mailchimpValid = mailchimpValid;
+        return this;
+      }
+
+      public ValidationResultBuilder mailerLiteValid(boolean mailerLiteValid) {
+        this.mailerLiteValid = mailerLiteValid;
         return this;
       }
 
@@ -144,7 +174,7 @@ public class MigrationValidator {
       }
 
       public ValidationResult build() {
-        return new ValidationResult(valid, errors, validatedAt);
+        return new ValidationResult(valid, mailchimpValid, mailerLiteValid, errors, validatedAt);
       }
     }
   }

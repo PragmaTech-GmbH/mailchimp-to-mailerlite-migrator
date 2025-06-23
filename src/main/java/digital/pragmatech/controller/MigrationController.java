@@ -113,15 +113,15 @@ public class MigrationController {
 
   // Step-based migration endpoints
   @PostMapping("/migrate-tags")
-  public ResponseEntity<ApiResponse<String>> migrateTags(@RequestBody Map<String, List<String>> request) {
+  public ResponseEntity<ApiResponse<Map<String, Object>>> migrateTags(@RequestBody Map<String, List<String>> request) {
     try {
       List<String> tags = request.get("tags");
       if (tags == null || tags.isEmpty()) {
         return ResponseEntity.ok(ApiResponse.error("No tags provided", "NO_TAGS"));
       }
 
-      migrationOrchestrator.migrateTags(tags);
-      return ResponseEntity.ok(ApiResponse.success("Tags migrated successfully"));
+      Map<String, Object> result = migrationOrchestrator.migrateTags(tags);
+      return ResponseEntity.ok(ApiResponse.success("Tags migrated successfully", result));
     } catch (Exception e) {
       log.error("Failed to migrate tags", e);
       return ResponseEntity.ok(ApiResponse.error("Failed to migrate tags: " + e.getMessage(), "TAG_MIGRATION_FAILED"));
@@ -129,15 +129,22 @@ public class MigrationController {
   }
 
   @PostMapping("/migrate-stores")
-  public ResponseEntity<ApiResponse<String>> migrateStores(@RequestBody Map<String, List<String>> request) {
+  public ResponseEntity<ApiResponse<Map<String, Object>>> migrateStores(@RequestBody Map<String, List<String>> request) {
     try {
       List<String> stores = request.get("stores");
       if (stores == null || stores.isEmpty()) {
-        return ResponseEntity.ok(ApiResponse.success("No stores to migrate"));
+        Map<String, Object> emptyResult = Map.of(
+            "totalStores", 0,
+            "processedStores", 0,
+            "successfulStores", 0,
+            "failedStores", 0,
+            "message", "No stores selected to migrate"
+        );
+        return ResponseEntity.ok(ApiResponse.success("No stores to migrate", emptyResult));
       }
 
-      migrationOrchestrator.migrateStores(stores);
-      return ResponseEntity.ok(ApiResponse.success("Stores migrated successfully"));
+      Map<String, Object> result = migrationOrchestrator.migrateStores(stores);
+      return ResponseEntity.ok(ApiResponse.success("Stores migrated successfully", result));
     } catch (Exception e) {
       log.error("Failed to migrate stores", e);
       return ResponseEntity.ok(ApiResponse.error("Failed to migrate stores: " + e.getMessage(), "STORE_MIGRATION_FAILED"));
@@ -145,15 +152,15 @@ public class MigrationController {
   }
 
   @PostMapping("/migrate-subscribers")
-  public ResponseEntity<ApiResponse<String>> migrateSubscribers(@RequestBody Map<String, Object> request) {
+  public ResponseEntity<ApiResponse<Map<String, Object>>> migrateSubscribers(@RequestBody Map<String, Object> request) {
     try {
       @SuppressWarnings("unchecked")
       List<String> selectedTags = (List<String>) request.get("selectedTags");
       @SuppressWarnings("unchecked")
       List<String> selectedStores = (List<String>) request.get("selectedStores");
 
-      migrationOrchestrator.migrateSubscribers(selectedTags, selectedStores);
-      return ResponseEntity.ok(ApiResponse.success("Subscribers migrated successfully"));
+      Map<String, Object> result = migrationOrchestrator.migrateSubscribers(selectedTags, selectedStores);
+      return ResponseEntity.ok(ApiResponse.success("Subscribers migrated successfully", result));
     } catch (Exception e) {
       log.error("Failed to migrate subscribers", e);
       return ResponseEntity.ok(ApiResponse.error("Failed to migrate subscribers: " + e.getMessage(), "SUBSCRIBER_MIGRATION_FAILED"));
@@ -161,18 +168,36 @@ public class MigrationController {
   }
 
   @PostMapping("/sync-orders")
-  public ResponseEntity<ApiResponse<String>> syncOrders(@RequestBody Map<String, List<String>> request) {
+  public ResponseEntity<ApiResponse<Map<String, Object>>> syncOrders(@RequestBody Map<String, List<String>> request) {
     try {
       List<String> selectedStores = request.get("selectedStores");
       if (selectedStores == null || selectedStores.isEmpty()) {
-        return ResponseEntity.ok(ApiResponse.success("No orders to sync - no stores selected"));
+        Map<String, Object> emptyResult = Map.of(
+            "totalStores", 0,
+            "processedStores", 0,
+            "totalOrders", 0,
+            "syncedOrders", 0,
+            "message", "No stores selected for order sync"
+        );
+        return ResponseEntity.ok(ApiResponse.success("No orders to sync - no stores selected", emptyResult));
       }
 
-      migrationOrchestrator.syncOrders(selectedStores);
-      return ResponseEntity.ok(ApiResponse.success("Orders synced successfully"));
+      Map<String, Object> result = migrationOrchestrator.syncOrders(selectedStores);
+      return ResponseEntity.ok(ApiResponse.success("Orders synced successfully", result));
     } catch (Exception e) {
       log.error("Failed to sync orders", e);
       return ResponseEntity.ok(ApiResponse.error("Failed to sync orders: " + e.getMessage(), "ORDER_SYNC_FAILED"));
+    }
+  }
+
+  @GetMapping("/step-results")
+  public ResponseEntity<ApiResponse<Map<String, Object>>> getStepResults() {
+    try {
+      Map<String, Object> allResults = progressTracker.getAllStepResults();
+      return ResponseEntity.ok(ApiResponse.success("Step results retrieved", allResults));
+    } catch (Exception e) {
+      log.error("Failed to get step results", e);
+      return ResponseEntity.ok(ApiResponse.error("Failed to get step results: " + e.getMessage(), "STEP_RESULTS_FAILED"));
     }
   }
 }
