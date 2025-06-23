@@ -5,53 +5,180 @@
 </head>
 <body>
     <div th:fragment="content">
-        <!-- Connection Status -->
-        <div id="connection-status" class="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h2 class="text-xl font-semibold text-gray-800 mb-4">Connection Status</h2>
-            <div class="flex space-x-4">
-                <div id="mailchimp-status" class="flex items-center">
-                    <div class="w-3 h-3 bg-gray-400 rounded-full mr-2"></div>
-                    <span>Mailchimp: Checking...</span>
-                </div>
-                <div id="mailerlite-status" class="flex items-center">
-                    <div class="w-3 h-3 bg-gray-400 rounded-full mr-2"></div>
-                    <span>MailerLite: Checking...</span>
+        <!-- Migration Wizard Progress -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Migration Wizard</h2>
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center space-x-4">
+                    <div id="step-1" class="flex items-center">
+                        <div class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-semibold mr-2">1</div>
+                        <span class="text-sm font-medium">Validate APIs</span>
+                    </div>
+                    <div class="w-8 h-px bg-gray-300"></div>
+                    <div id="step-2" class="flex items-center">
+                        <div class="w-8 h-8 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center text-sm font-semibold mr-2">2</div>
+                        <span class="text-sm text-gray-600">Analyze Data</span>
+                    </div>
+                    <div class="w-8 h-px bg-gray-300"></div>
+                    <div id="step-3" class="flex items-center">
+                        <div class="w-8 h-8 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center text-sm font-semibold mr-2">3</div>
+                        <span class="text-sm text-gray-600">Select Tags</span>
+                    </div>
+                    <div class="w-8 h-px bg-gray-300"></div>
+                    <div id="step-4" class="flex items-center">
+                        <div class="w-8 h-8 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center text-sm font-semibold mr-2">4</div>
+                        <span class="text-sm text-gray-600">Select Stores</span>
+                    </div>
+                    <div class="w-8 h-px bg-gray-300"></div>
+                    <div id="step-5" class="flex items-center">
+                        <div class="w-8 h-8 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center text-sm font-semibold mr-2">5</div>
+                        <span class="text-sm text-gray-600">Migrate Data</span>
+                    </div>
+                    <div class="w-8 h-px bg-gray-300"></div>
+                    <div id="step-6" class="flex items-center">
+                        <div class="w-8 h-8 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center text-sm font-semibold mr-2">6</div>
+                        <span class="text-sm text-gray-600">Sync Orders</span>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Migration Control Panel -->
+        <!-- Step Content Area -->
         <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h2 class="text-xl font-semibold text-gray-800 mb-4">Migration Control</h2>
-            
-            <div id="migration-controls" class="flex space-x-4">
-                <button id="start-migration-btn" 
-                        onclick="startMigration()"
-                        class="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700 transition duration-200">
-                    Start Migration
+            <!-- Step 1: API Validation -->
+            <div id="step-1-content" class="wizard-step">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Step 1: Validate API Connections</h3>
+                <p class="text-gray-600 mb-4">First, let's verify that both Mailchimp and MailerLite API connections are working properly.</p>
+                
+                <div id="connection-status" class="mb-6">
+                    <div class="flex space-x-4 mb-4">
+                        <div id="mailchimp-status" class="flex items-center">
+                            <div class="w-3 h-3 bg-gray-400 rounded-full mr-2"></div>
+                            <span>Mailchimp: Checking...</span>
+                        </div>
+                        <div id="mailerlite-status" class="flex items-center">
+                            <div class="w-3 h-3 bg-gray-400 rounded-full mr-2"></div>
+                            <span>MailerLite: Checking...</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <button id="validate-connections-btn" class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition duration-200" onclick="validateApiConnections()">
+                    Validate Connections
                 </button>
                 
-                <button id="pause-migration-btn" 
-                        onclick="pauseMigration()"
-                        class="bg-yellow-600 text-white px-6 py-2 rounded-md hover:bg-yellow-700 transition duration-200 hidden">
-                    Pause Migration
-                </button>
-                
-                <button id="resume-migration-btn" 
-                        onclick="resumeMigration()"
-                        class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition duration-200 hidden">
-                    Resume Migration
-                </button>
-                
-                <button id="cancel-migration-btn" 
-                        onclick="cancelMigration()"
-                        class="bg-red-600 text-white px-6 py-2 rounded-md hover:bg-red-700 transition duration-200 hidden">
-                    Cancel Migration
-                </button>
+                <div id="validation-result" class="mt-4 hidden"></div>
             </div>
-            
-            <div id="migration-message" class="mt-4 hidden">
-                <!-- Dynamic messages will appear here -->
+
+            <!-- Step 2: Data Analysis -->
+            <div id="step-2-content" class="wizard-step hidden">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Step 2: Analyze Mailchimp Data</h3>
+                <p class="text-gray-600 mb-4">Let's analyze your Mailchimp account to see what data we'll be migrating.</p>
+                
+                <button id="analyze-data-btn" class="bg-purple-600 text-white px-6 py-2 rounded-md hover:bg-purple-700 transition duration-200" onclick="analyzeData()">
+                    Analyze Data
+                </button>
+                
+                <div id="analysis-result" class="mt-4 hidden"></div>
+            </div>
+
+            <!-- Step 3: Tag Selection -->
+            <div id="step-3-content" class="wizard-step hidden">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Step 3: Select Tags to Migrate</h3>
+                <p class="text-gray-600 mb-4">Choose which tags from Mailchimp you want to migrate as groups in MailerLite.</p>
+                
+                <div id="tags-selection" class="hidden">
+                    <div class="mb-4">
+                        <label class="flex items-center">
+                            <input type="checkbox" id="select-all-tags" class="mr-2" onchange="toggleAllTags()">
+                            <span class="font-medium">Select All Tags</span>
+                        </label>
+                    </div>
+                    <div id="tags-list" class="space-y-2 max-h-64 overflow-y-auto border rounded p-4">
+                        <!-- Tags will be populated here -->
+                    </div>
+                    <div class="mt-4">
+                        <button id="migrate-tags-btn" class="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700 transition duration-200" onclick="migrateTags()">
+                            Migrate Selected Tags
+                        </button>
+                    </div>
+                </div>
+                
+                <button id="load-tags-btn" class="bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-indigo-700 transition duration-200" onclick="loadTags()">
+                    Load Tags
+                </button>
+                
+                <div id="tags-result" class="mt-4 hidden"></div>
+            </div>
+
+            <!-- Step 4: Ecommerce Store Selection -->
+            <div id="step-4-content" class="wizard-step hidden">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Step 4: Select Ecommerce Stores</h3>
+                <p class="text-gray-600 mb-4">Choose which ecommerce stores and their data you want to migrate to MailerLite.</p>
+                
+                <div id="stores-selection" class="hidden">
+                    <div class="mb-4">
+                        <label class="flex items-center">
+                            <input type="checkbox" id="select-all-stores" class="mr-2" onchange="toggleAllStores()">
+                            <span class="font-medium">Select All Stores</span>
+                        </label>
+                    </div>
+                    <div id="stores-list" class="space-y-4">
+                        <!-- Stores will be populated here -->
+                    </div>
+                    <div class="mt-4">
+                        <button id="migrate-stores-btn" class="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700 transition duration-200" onclick="migrateStores()">
+                            Migrate Selected Stores
+                        </button>
+                    </div>
+                </div>
+                
+                <button id="load-stores-btn" class="bg-orange-600 text-white px-6 py-2 rounded-md hover:bg-orange-700 transition duration-200" onclick="loadStores()">
+                    Load Stores
+                </button>
+                
+                <div id="stores-result" class="mt-4 hidden"></div>
+            </div>
+
+            <!-- Step 5: Subscriber Migration -->
+            <div id="step-5-content" class="wizard-step hidden">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Step 5: Migrate Subscribers</h3>
+                <p class="text-gray-600 mb-4">Now we'll migrate all subscribers from Mailchimp to MailerLite, including their selected tags as groups.</p>
+                
+                <button id="migrate-subscribers-btn" class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition duration-200" onclick="migrateSubscribers()">
+                    Start Subscriber Migration
+                </button>
+                
+                <div id="subscribers-result" class="mt-4 hidden"></div>
+            </div>
+
+            <!-- Step 6: Order Sync -->
+            <div id="step-6-content" class="wizard-step hidden">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Step 6: Sync Orders</h3>
+                <p class="text-gray-600 mb-4">Finally, we'll sync all orders from Mailchimp to MailerLite to complete the migration.</p>
+                
+                <button id="sync-orders-btn" class="bg-purple-600 text-white px-6 py-2 rounded-md hover:bg-purple-700 transition duration-200" onclick="syncOrders()">
+                    Sync Orders
+                </button>
+                
+                <div id="orders-result" class="mt-4 hidden"></div>
+            </div>
+        </div>
+
+        <!-- Wizard Navigation -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div class="flex justify-between items-center">
+                <button id="prev-step-btn" class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition duration-200 hidden" onclick="previousStep()">
+                    Previous Step
+                </button>
+                
+                <div id="migration-message" class="text-center">
+                    <!-- Dynamic messages will appear here -->
+                </div>
+                
+                <button id="next-step-btn" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition duration-200 hidden" onclick="nextStep()">
+                    Next Step
+                </button>
             </div>
         </div>
 
@@ -151,235 +278,554 @@
 
     <div th:fragment="scripts">
         <script>
-            let migrationStatus = null;
-            let pollingInterval = null;
+            let currentStep = 1;
+            let totalSteps = 6;
+            let migrationData = {
+                validationResult: null,
+                analysisResult: null,
+                selectedTags: [],
+                selectedStores: [],
+                allTags: [],
+                allStores: []
+            };
 
-            // Poll for migration status
-            function startPolling() {
-                // Poll immediately
-                pollMigrationStatus();
+            // Wizard navigation
+            function showStep(step) {
+                // Hide all steps
+                for (let i = 1; i <= totalSteps; i++) {
+                    document.getElementById(`step-${i}-content`).classList.add('hidden');
+                    const stepIndicator = document.getElementById(`step-${i}`);
+                    const circle = stepIndicator.querySelector('div');
+                    const text = stepIndicator.querySelector('span');
+                    
+                    if (i < step) {
+                        // Completed step
+                        circle.className = 'w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-semibold mr-2';
+                        text.className = 'text-sm font-medium text-green-600';
+                    } else if (i === step) {
+                        // Current step
+                        circle.className = 'w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-semibold mr-2';
+                        text.className = 'text-sm font-medium';
+                    } else {
+                        // Future step
+                        circle.className = 'w-8 h-8 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center text-sm font-semibold mr-2';
+                        text.className = 'text-sm text-gray-600';
+                    }
+                }
                 
-                // Then poll every 2 seconds
-                pollingInterval = setInterval(pollMigrationStatus, 2000);
+                // Show current step
+                document.getElementById(`step-${step}-content`).classList.remove('hidden');
+                
+                // Update navigation buttons
+                document.getElementById('prev-step-btn').classList.toggle('hidden', step === 1);
+                document.getElementById('next-step-btn').classList.toggle('hidden', step === totalSteps);
+                
+                currentStep = step;
             }
 
-            function stopPolling() {
-                if (pollingInterval) {
-                    clearInterval(pollingInterval);
-                    pollingInterval = null;
+            function nextStep() {
+                if (currentStep < totalSteps) {
+                    showStep(currentStep + 1);
                 }
             }
 
-            function pollMigrationStatus() {
-                fetch('/api/migration/status')
+            function previousStep() {
+                if (currentStep > 1) {
+                    showStep(currentStep - 1);
+                }
+            }
+
+            // Step 1: API Validation
+            function validateApiConnections() {
+                const btn = document.getElementById('validate-connections-btn');
+                const result = document.getElementById('validation-result');
+                
+                btn.disabled = true;
+                btn.textContent = 'Validating...';
+                result.className = 'mt-4 p-4 bg-blue-100 border border-blue-400 text-blue-700 rounded';
+                result.innerHTML = 'Testing API connections...';
+                result.classList.remove('hidden');
+                
+                fetch('/api/validate', { method: 'POST' })
                     .then(response => response.json())
                     .then(data => {
-                        if (data.success && data.data) {
-                            updateMigrationDisplay(data.data);
+                        if (data.success) {
+                            migrationData.validationResult = data.data;
+                            result.className = 'mt-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded';
+                            result.innerHTML = '✅ API connections validated successfully!';
                             
-                            // Stop polling if migration is completed or failed
-                            if (data.data.state === 'COMPLETED' || data.data.state === 'FAILED') {
-                                stopPolling();
-                            }
+                            // Update connection status indicators
+                            updateConnectionStatus(true, true);
+                            
+                            // Enable next step
+                            document.getElementById('next-step-btn').classList.remove('hidden');
                         } else {
-                            // No active migration, stop polling
-                            stopPolling();
+                            result.className = 'mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded';
+                            result.innerHTML = '❌ Validation failed: ' + (data.message || 'Unknown error');
                         }
                     })
                     .catch(error => {
-                        console.error('Error polling migration status:', error);
+                        result.className = 'mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded';
+                        result.innerHTML = '❌ Connection test failed: ' + error.message;
+                    })
+                    .finally(() => {
+                        btn.disabled = false;
+                        btn.textContent = 'Validate Connections';
                     });
             }
 
-            // API calls
-            function startMigration() {
-                fetch('/api/migration/start', { method: 'POST' })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            showMessage('Migration started successfully!', 'success');
-                            document.getElementById('progress-section').classList.remove('hidden');
-                            updateControlButtons('in_progress');
-                            startPolling(); // Start polling when migration starts
-                        } else {
-                            showMessage('Failed to start migration: ' + data.message, 'error');
-                        }
-                    })
-                    .catch(error => showMessage('Error: ' + error.message, 'error'));
+            function updateConnectionStatus(mailchimp, mailerlite) {
+                const mailchimpStatus = document.getElementById('mailchimp-status');
+                const mailerliteStatus = document.getElementById('mailerlite-status');
+                
+                if (mailchimp) {
+                    mailchimpStatus.innerHTML = '<div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div><span>Mailchimp: Connected</span>';
+                } else {
+                    mailchimpStatus.innerHTML = '<div class="w-3 h-3 bg-red-500 rounded-full mr-2"></div><span>Mailchimp: Failed</span>';
+                }
+                
+                if (mailerlite) {
+                    mailerliteStatus.innerHTML = '<div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div><span>MailerLite: Connected</span>';
+                } else {
+                    mailerliteStatus.innerHTML = '<div class="w-3 h-3 bg-red-500 rounded-full mr-2"></div><span>MailerLite: Failed</span>';
+                }
             }
 
-            function pauseMigration() {
-                fetch('/api/migration/pause', { method: 'POST' })
+            // Step 2: Data Analysis
+            function analyzeData() {
+                const btn = document.getElementById('analyze-data-btn');
+                const result = document.getElementById('analysis-result');
+                
+                btn.disabled = true;
+                btn.textContent = 'Analyzing...';
+                result.className = 'mt-4 p-4 bg-blue-100 border border-blue-400 text-blue-700 rounded';
+                result.innerHTML = '🔍 Analyzing your Mailchimp data...';
+                result.classList.remove('hidden');
+                
+                fetch('/api/analyze', { method: 'POST' })
                     .then(response => response.json())
                     .then(data => {
-                        if (data.success) {
-                            showMessage('Migration paused', 'info');
-                            updateControlButtons('paused');
+                        if (data.success && data.data) {
+                            migrationData.analysisResult = data.data;
+                            const analysis = data.data;
+                            result.className = 'mt-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded';
+                            result.innerHTML = `
+                                <div class="grid grid-cols-2 gap-4 mb-4">
+                                    <div class="bg-white p-3 rounded border">
+                                        <div class="text-2xl font-bold text-blue-600">${analysis.totalSubscribers}</div>
+                                        <div class="text-sm text-gray-600">Total Subscribers</div>
+                                    </div>
+                                    <div class="bg-white p-3 rounded border">
+                                        <div class="text-2xl font-bold text-green-600">${analysis.totalTags}</div>
+                                        <div class="text-sm text-gray-600">Tags Available</div>
+                                    </div>
+                                    <div class="bg-white p-3 rounded border">
+                                        <div class="text-2xl font-bold text-purple-600">${analysis.totalLists}</div>
+                                        <div class="text-sm text-gray-600">Mailchimp Lists</div>
+                                    </div>
+                                    <div class="bg-white p-3 rounded border">
+                                        <div class="text-2xl font-bold text-orange-600">${analysis.estimatedMigrationTimeMinutes}</div>
+                                        <div class="text-sm text-gray-600">Est. Minutes</div>
+                                    </div>
+                                </div>
+                                <div class="bg-green-50 border border-green-200 rounded p-4">
+                                    <p class="text-green-800">✅ Analysis complete! Ready to proceed with migration.</p>
+                                </div>
+                            `;
+                            
+                            // Enable next step
+                            document.getElementById('next-step-btn').classList.remove('hidden');
                         } else {
-                            showMessage('Failed to pause migration: ' + data.message, 'error');
+                            result.className = 'mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded';
+                            result.innerHTML = `❌ Analysis failed: ${data.message || 'Unknown error'}`;
                         }
                     })
-                    .catch(error => showMessage('Error: ' + error.message, 'error'));
+                    .catch(error => {
+                        result.className = 'mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded';
+                        result.innerHTML = `❌ Analysis failed: ${error.message}`;
+                    })
+                    .finally(() => {
+                        btn.disabled = false;
+                        btn.textContent = 'Analyze Data';
+                    });
             }
 
-            function resumeMigration() {
-                fetch('/api/migration/resume', { method: 'POST' })
+            // Step 3: Load and select tags
+            function loadTags() {
+                const btn = document.getElementById('load-tags-btn');
+                const result = document.getElementById('tags-result');
+                const selection = document.getElementById('tags-selection');
+                
+                btn.disabled = true;
+                btn.textContent = 'Loading...';
+                result.className = 'mt-4 p-4 bg-blue-100 border border-blue-400 text-blue-700 rounded';
+                result.innerHTML = '🔄 Fetching tags from Mailchimp...';
+                result.classList.remove('hidden');
+                
+                fetch('/api/tags')
                     .then(response => response.json())
                     .then(data => {
-                        if (data.success) {
-                            showMessage('Migration resumed', 'success');
-                            updateControlButtons('in_progress');
-                        } else {
-                            showMessage('Failed to resume migration: ' + data.message, 'error');
-                        }
-                    })
-                    .catch(error => showMessage('Error: ' + error.message, 'error'));
-            }
-
-            function cancelMigration() {
-                if (confirm('Are you sure you want to cancel the migration?')) {
-                    fetch('/api/migration/cancel', { method: 'POST' })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                showMessage('Migration cancelled', 'info');
-                                updateControlButtons('cancelled');
-                            } else {
-                                showMessage('Failed to cancel migration: ' + data.message, 'error');
+                        if (data.success && data.data) {
+                            const tagsByList = data.data;
+                            let allTags = [];
+                            
+                            for (const [listName, tags] of Object.entries(tagsByList)) {
+                                tags.forEach(tag => {
+                                    if (!allTags.find(t => t.name === tag)) {
+                                        allTags.push({ name: tag, listName: listName });
+                                    }
+                                });
                             }
-                        })
-                        .catch(error => showMessage('Error: ' + error.message, 'error'));
-                }
+                            
+                            migrationData.allTags = allTags;
+                            displayTagSelection(allTags);
+                            
+                            result.classList.add('hidden');
+                            selection.classList.remove('hidden');
+                            btn.classList.add('hidden');
+                        } else {
+                            result.className = 'mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded';
+                            result.innerHTML = `❌ Failed to fetch tags: ${data.message || 'Unknown error'}`;
+                        }
+                    })
+                    .catch(error => {
+                        result.className = 'mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded';
+                        result.innerHTML = `❌ Error fetching tags: ${error.message}`;
+                    })
+                    .finally(() => {
+                        btn.disabled = false;
+                        btn.textContent = 'Load Tags';
+                    });
             }
 
-            function updateMigrationDisplay(status) {
-                migrationStatus = status;
+            function displayTagSelection(tags) {
+                const tagsList = document.getElementById('tags-list');
+                tagsList.innerHTML = '';
                 
-                // Update phase
-                document.getElementById('current-phase').textContent = 'Phase: ' + status.phase;
-                
-                // Update progress
-                if (status.progress) {
-                    const percentage = status.progress.percentComplete || 0;
-                    document.getElementById('progress-percentage').textContent = percentage.toFixed(1) + '%';
-                    document.getElementById('progress-bar').style.width = percentage + '%';
-                    
-                    document.getElementById('total-items').textContent = status.progress.totalItems || 0;
-                    document.getElementById('processed-items').textContent = status.progress.processedItems || 0;
-                    document.getElementById('successful-items').textContent = status.progress.successfulItems || 0;
-                    document.getElementById('failed-items').textContent = status.progress.failedItems || 0;
-                }
-                
-                // Update statistics
-                if (status.statistics) {
-                    document.getElementById('total-subscribers').textContent = status.statistics.totalSubscribers || 0;
-                    document.getElementById('migrated-subscribers').textContent = status.statistics.migratedSubscribers || 0;
-                    document.getElementById('total-tags').textContent = status.statistics.totalTags || 0;
-                    document.getElementById('migrated-groups').textContent = status.statistics.migratedGroups || 0;
-                    document.getElementById('total-products').textContent = status.statistics.totalProducts || 0;
-                    document.getElementById('migrated-products').textContent = status.statistics.migratedProducts || 0;
-                    
-                    const timeRemaining = status.statistics.estimatedTimeRemaining || 0;
-                    document.getElementById('estimated-time').textContent = timeRemaining > 0 ? timeRemaining + ' min' : '--';
-                }
-                
-                // Update errors
-                if (status.errors && status.errors.length > 0) {
-                    document.getElementById('error-section').classList.remove('hidden');
-                    updateErrorDisplay(status.errors);
-                }
-                
-                // Update control buttons based on state
-                updateControlButtons(status.state);
-                
-                // Show completion if done
-                if (status.state === 'COMPLETED') {
-                    document.getElementById('completion-section').classList.remove('hidden');
-                }
+                tags.forEach((tag, index) => {
+                    const tagDiv = document.createElement('div');
+                    tagDiv.className = 'flex items-center p-2 hover:bg-gray-50 rounded';
+                    tagDiv.innerHTML = `
+                        <input type="checkbox" id="tag-${index}" class="mr-3 tag-checkbox" value="${tag.name}">
+                        <label for="tag-${index}" class="flex-1 cursor-pointer">
+                            <span class="font-medium">${tag.name}</span>
+                            <span class="text-sm text-gray-500 ml-2">(from ${tag.listName})</span>
+                        </label>
+                    `;
+                    tagsList.appendChild(tagDiv);
+                });
             }
 
-            function updateControlButtons(state) {
-                const startBtn = document.getElementById('start-migration-btn');
-                const pauseBtn = document.getElementById('pause-migration-btn');
-                const resumeBtn = document.getElementById('resume-migration-btn');
-                const cancelBtn = document.getElementById('cancel-migration-btn');
+            function toggleAllTags() {
+                const selectAll = document.getElementById('select-all-tags');
+                const tagCheckboxes = document.querySelectorAll('.tag-checkbox');
                 
-                // Hide all buttons first
-                [startBtn, pauseBtn, resumeBtn, cancelBtn].forEach(btn => btn.classList.add('hidden'));
-                
-                switch (state) {
-                    case 'in_progress':
-                    case 'IN_PROGRESS':
-                        pauseBtn.classList.remove('hidden');
-                        cancelBtn.classList.remove('hidden');
-                        break;
-                    case 'paused':
-                    case 'PAUSED':
-                        resumeBtn.classList.remove('hidden');
-                        cancelBtn.classList.remove('hidden');
-                        break;
-                    case 'completed':
-                    case 'COMPLETED':
-                    case 'failed':
-                    case 'FAILED':
-                    case 'cancelled':
-                        startBtn.classList.remove('hidden');
-                        break;
-                    default:
-                        startBtn.classList.remove('hidden');
-                }
+                tagCheckboxes.forEach(checkbox => {
+                    checkbox.checked = selectAll.checked;
+                });
             }
 
-            function updateErrorDisplay(errors) {
-                const errorList = document.getElementById('error-list');
-                errorList.innerHTML = '';
+            function migrateTags() {
+                const selectedCheckboxes = document.querySelectorAll('.tag-checkbox:checked');
+                const selectedTags = Array.from(selectedCheckboxes).map(cb => cb.value);
                 
-                errors.forEach(error => {
-                    const errorDiv = document.createElement('div');
-                    errorDiv.className = 'bg-red-50 border border-red-200 rounded p-3';
-                    errorDiv.innerHTML = `
-                        <div class="text-sm">
-                            <span class="font-semibold text-red-800">${error.phase}:</span>
-                            <span class="text-red-600">${error.errorMessage}</span>
-                            ${error.entity ? `<br><span class="text-gray-600">Entity: ${error.entity} (${error.entityId || 'N/A'})</span>` : ''}
+                if (selectedTags.length === 0) {
+                    showMessage('Please select at least one tag to migrate.', 'error');
+                    return;
+                }
+                
+                migrationData.selectedTags = selectedTags;
+                
+                const btn = document.getElementById('migrate-tags-btn');
+                const result = document.getElementById('tags-result');
+                
+                btn.disabled = true;
+                btn.textContent = 'Migrating...';
+                result.className = 'mt-4 p-4 bg-blue-100 border border-blue-400 text-blue-700 rounded';
+                result.innerHTML = `🔄 Migrating ${selectedTags.length} tags to MailerLite as groups...`;
+                result.classList.remove('hidden');
+                
+                fetch('/api/migration/migrate-tags', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tags: selectedTags })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            result.className = 'mt-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded';
+                            result.innerHTML = `✅ Successfully migrated ${selectedTags.length} tags as groups to MailerLite!`;
+                            
+                            // Enable next step
+                            document.getElementById('next-step-btn').classList.remove('hidden');
+                        } else {
+                            result.className = 'mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded';
+                            result.innerHTML = `❌ Failed to migrate tags: ${data.message || 'Unknown error'}`;
+                        }
+                    })
+                    .catch(error => {
+                        result.className = 'mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded';
+                        result.innerHTML = `❌ Error migrating tags: ${error.message}`;
+                    })
+                    .finally(() => {
+                        btn.disabled = false;
+                        btn.textContent = 'Migrate Selected Tags';
+                    });
+            }
+
+            // Step 4: Load and select ecommerce stores
+            function loadStores() {
+                const btn = document.getElementById('load-stores-btn');
+                const result = document.getElementById('stores-result');
+                const selection = document.getElementById('stores-selection');
+                
+                btn.disabled = true;
+                btn.textContent = 'Loading...';
+                result.className = 'mt-4 p-4 bg-blue-100 border border-blue-400 text-blue-700 rounded';
+                result.innerHTML = '🔄 Fetching ecommerce stores from Mailchimp...';
+                result.classList.remove('hidden');
+                
+                fetch('/api/ecommerce/stores')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.data) {
+                            migrationData.allStores = data.data;
+                            displayStoreSelection(data.data);
+                            
+                            result.classList.add('hidden');
+                            selection.classList.remove('hidden');
+                            btn.classList.add('hidden');
+                        } else {
+                            result.className = 'mt-4 p-4 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded';
+                            result.innerHTML = `⚠️ No ecommerce stores found or error: ${data.message || 'No stores available'}`;
+                            
+                            // Enable next step even if no stores
+                            document.getElementById('next-step-btn').classList.remove('hidden');
+                        }
+                    })
+                    .catch(error => {
+                        result.className = 'mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded';
+                        result.innerHTML = `❌ Error fetching stores: ${error.message}`;
+                    })
+                    .finally(() => {
+                        btn.disabled = false;
+                        btn.textContent = 'Load Stores';
+                    });
+            }
+
+            function displayStoreSelection(stores) {
+                const storesList = document.getElementById('stores-list');
+                storesList.innerHTML = '';
+                
+                if (stores.length === 0) {
+                    storesList.innerHTML = '<p class="text-gray-500">No ecommerce stores found in your Mailchimp account.</p>';
+                    document.getElementById('next-step-btn').classList.remove('hidden');
+                    return;
+                }
+                
+                stores.forEach((store, index) => {
+                    const storeDiv = document.createElement('div');
+                    storeDiv.className = 'border rounded p-4 hover:bg-gray-50';
+                    storeDiv.innerHTML = `
+                        <div class="flex items-start">
+                            <input type="checkbox" id="store-${index}" class="mr-3 mt-1 store-checkbox" value="${store.id}">
+                            <div class="flex-1">
+                                <label for="store-${index}" class="cursor-pointer">
+                                    <h4 class="font-medium">${store.name}</h4>
+                                    <p class="text-sm text-gray-600">ID: ${store.id}</p>
+                                    <div class="mt-2 grid grid-cols-3 gap-4 text-sm">
+                                        <div>
+                                            <span class="font-medium">${store.products || 0}</span>
+                                            <span class="text-gray-500">Products</span>
+                                        </div>
+                                        <div>
+                                            <span class="font-medium">${store.orders || 0}</span>
+                                            <span class="text-gray-500">Orders</span>
+                                        </div>
+                                        <div>
+                                            <span class="font-medium">${store.revenue || '$0'}</span>
+                                            <span class="text-gray-500">Revenue</span>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
                         </div>
                     `;
-                    errorList.appendChild(errorDiv);
+                    storesList.appendChild(storeDiv);
                 });
+            }
+
+            function toggleAllStores() {
+                const selectAll = document.getElementById('select-all-stores');
+                const storeCheckboxes = document.querySelectorAll('.store-checkbox');
+                
+                storeCheckboxes.forEach(checkbox => {
+                    checkbox.checked = selectAll.checked;
+                });
+            }
+
+            function migrateStores() {
+                const selectedCheckboxes = document.querySelectorAll('.store-checkbox:checked');
+                const selectedStores = Array.from(selectedCheckboxes).map(cb => cb.value);
+                
+                migrationData.selectedStores = selectedStores;
+                
+                const btn = document.getElementById('migrate-stores-btn');
+                const result = document.getElementById('stores-result');
+                
+                btn.disabled = true;
+                btn.textContent = 'Migrating...';
+                result.className = 'mt-4 p-4 bg-blue-100 border border-blue-400 text-blue-700 rounded';
+                result.innerHTML = `🔄 Migrating ${selectedStores.length} stores to MailerLite...`;
+                result.classList.remove('hidden');
+                
+                fetch('/api/migration/migrate-stores', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ stores: selectedStores })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            result.className = 'mt-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded';
+                            result.innerHTML = `✅ Successfully migrated ${selectedStores.length} stores to MailerLite!`;
+                            
+                            // Enable next step
+                            document.getElementById('next-step-btn').classList.remove('hidden');
+                        } else {
+                            result.className = 'mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded';
+                            result.innerHTML = `❌ Failed to migrate stores: ${data.message || 'Unknown error'}`;
+                        }
+                    })
+                    .catch(error => {
+                        result.className = 'mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded';
+                        result.innerHTML = `❌ Error migrating stores: ${error.message}`;
+                    })
+                    .finally(() => {
+                        btn.disabled = false;
+                        btn.textContent = 'Migrate Selected Stores';
+                    });
+            }
+
+            // Step 5: Migrate subscribers
+            function migrateSubscribers() {
+                const btn = document.getElementById('migrate-subscribers-btn');
+                const result = document.getElementById('subscribers-result');
+                
+                btn.disabled = true;
+                btn.textContent = 'Migrating...';
+                result.className = 'mt-4 p-4 bg-blue-100 border border-blue-400 text-blue-700 rounded';
+                result.innerHTML = '🔄 Migrating subscribers from Mailchimp to MailerLite...';
+                result.classList.remove('hidden');
+                
+                fetch('/api/migration/migrate-subscribers', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        selectedTags: migrationData.selectedTags,
+                        selectedStores: migrationData.selectedStores
+                    })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            result.className = 'mt-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded';
+                            result.innerHTML = `✅ Successfully migrated subscribers to MailerLite!`;
+                            
+                            // Enable next step
+                            document.getElementById('next-step-btn').classList.remove('hidden');
+                        } else {
+                            result.className = 'mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded';
+                            result.innerHTML = `❌ Failed to migrate subscribers: ${data.message || 'Unknown error'}`;
+                        }
+                    })
+                    .catch(error => {
+                        result.className = 'mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded';
+                        result.innerHTML = `❌ Error migrating subscribers: ${error.message}`;
+                    })
+                    .finally(() => {
+                        btn.disabled = false;
+                        btn.textContent = 'Start Subscriber Migration';
+                    });
+            }
+
+            // Step 6: Sync orders
+            function syncOrders() {
+                const btn = document.getElementById('sync-orders-btn');
+                const result = document.getElementById('orders-result');
+                
+                btn.disabled = true;
+                btn.textContent = 'Syncing...';
+                result.className = 'mt-4 p-4 bg-blue-100 border border-blue-400 text-blue-700 rounded';
+                result.innerHTML = '🔄 Syncing orders from Mailchimp to MailerLite...';
+                result.classList.remove('hidden');
+                
+                fetch('/api/migration/sync-orders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ selectedStores: migrationData.selectedStores })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            result.className = 'mt-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded';
+                            result.innerHTML = `
+                                <div class="text-center">
+                                    <h3 class="text-lg font-semibold text-green-800 mb-2">🎉 Migration Complete!</h3>
+                                    <p class="text-green-700">All data has been successfully migrated from Mailchimp to MailerLite.</p>
+                                    <div class="mt-4">
+                                        <a href="/results" class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition duration-200">
+                                            View Migration Results
+                                        </a>
+                                    </div>
+                                </div>
+                            `;
+                        } else {
+                            result.className = 'mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded';
+                            result.innerHTML = `❌ Failed to sync orders: ${data.message || 'Unknown error'}`;
+                        }
+                    })
+                    .catch(error => {
+                        result.className = 'mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded';
+                        result.innerHTML = `❌ Error syncing orders: ${error.message}`;
+                    })
+                    .finally(() => {
+                        btn.disabled = false;
+                        btn.textContent = 'Sync Orders';
+                    });
             }
 
             function showMessage(message, type) {
                 const messageDiv = document.getElementById('migration-message');
                 const typeClasses = {
-                    success: 'bg-green-100 border-green-400 text-green-700',
-                    error: 'bg-red-100 border-red-400 text-red-700',
-                    info: 'bg-blue-100 border-blue-400 text-blue-700'
+                    success: 'text-green-600',
+                    error: 'text-red-600',
+                    info: 'text-blue-600'
                 };
                 
-                messageDiv.className = `p-4 border rounded ${typeClasses[type] || typeClasses.info}`;
+                messageDiv.className = typeClasses[type] || typeClasses.info;
                 messageDiv.textContent = message;
-                messageDiv.classList.remove('hidden');
                 
-                setTimeout(() => messageDiv.classList.add('hidden'), 5000);
+                setTimeout(() => messageDiv.textContent = '', 5000);
             }
 
             // Initialize on page load
             document.addEventListener('DOMContentLoaded', function() {
-                // Check current migration status
-                fetch('/api/migration/status')
+                showStep(1);
+                
+                // Check connection status on load
+                fetch('/api/validate', { method: 'POST' })
                     .then(response => response.json())
                     .then(data => {
-                        if (data.success && data.data) {
-                            updateMigrationDisplay(data.data);
-                            document.getElementById('progress-section').classList.remove('hidden');
-                            
-                            // Start polling if migration is in progress
-                            if (data.data.state === 'IN_PROGRESS' || data.data.state === 'PAUSED') {
-                                startPolling();
-                            }
+                        if (data.success) {
+                            updateConnectionStatus(true, true);
+                        } else {
+                            updateConnectionStatus(false, false);
                         }
                     })
-                    .catch(error => console.log('No active migration'));
+                    .catch(error => {
+                        updateConnectionStatus(false, false);
+                    });
             });
         </script>
     </div>

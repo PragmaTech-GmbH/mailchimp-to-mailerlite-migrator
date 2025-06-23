@@ -148,6 +148,45 @@ public class HomeController {
     }
   }
 
+  @GetMapping("/api/ecommerce/stores")
+  @ResponseBody
+  public ApiResponse<List<Map<String, Object>>> getEcommerceStores() {
+    try {
+      var stores = mailchimpService.getAllEcommerceShops();
+      List<Map<String, Object>> storeData = new ArrayList<>();
+
+      for (var store : stores) {
+        Map<String, Object> storeInfo = new HashMap<>();
+        storeInfo.put("id", store.getId());
+        storeInfo.put("name", store.getName());
+        storeInfo.put("domain", store.getDomain());
+        storeInfo.put("currencyCode", store.getCurrency());
+        
+        // Get additional store statistics
+        try {
+          // These would need to be implemented in MailchimpService
+          // For now, we'll use placeholder values
+          storeInfo.put("products", 0);
+          storeInfo.put("orders", 0);
+          storeInfo.put("revenue", "$0");
+        } catch (Exception e) {
+          log.warn("Failed to get statistics for store: {}", store.getId(), e);
+          storeInfo.put("products", 0);
+          storeInfo.put("orders", 0);
+          storeInfo.put("revenue", "N/A");
+        }
+        
+        storeData.add(storeInfo);
+      }
+
+      return ApiResponse.success("Ecommerce stores fetched successfully", storeData);
+
+    } catch (Exception e) {
+      log.error("Failed to fetch ecommerce stores", e);
+      return ApiResponse.error("Failed to fetch stores: " + e.getMessage());
+    }
+  }
+
   @GetMapping("/dashboard")
   public String dashboard(Model model) {
     // Check if API keys are configured
