@@ -5,6 +5,9 @@ import digital.pragmatech.service.mailerlite.MailerLiteService;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -16,6 +19,9 @@ public class MigrationValidator {
 
   private final MailchimpService mailchimpService;
   private final MailerLiteService mailerLiteService;
+  
+  // Virtual thread executor for parallel operations
+  private final Executor virtualThreadExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
   public ValidationResult validateApiConnections() {
     List<String> errors = new ArrayList<>();
@@ -56,31 +62,92 @@ public class MigrationValidator {
         PreMigrationAnalysis.builder().analyzedAt(LocalDateTime.now());
 
     try {
-      // Analyze Mailchimp data
+      // Get lists first
       var lists = mailchimpService.getAllLists();
       analysisBuilder.totalLists(lists.size());
-
-      int totalSubscribers = 0;
-      int totalTags = 0;
-
-      for (var list : lists) {
-        var members = mailchimpService.getAllMembers(list.getId());
-        totalSubscribers += members.size();
-
-        var tags = mailchimpService.getAllTags(list.getId());
-        totalTags += tags.size();
+      
+      if (lists.isEmpty()) {
+        log.info("No lists found in Mailchimp account");
+        return analysisBuilder
+            .totalSubscribers(0)
+            .totalTags(0)
+            .totalEcommerceShops(0)
+            .estimatedMigrationTimeMinutes(0)
+            .build();
       }
 
+      log.info("Starting parallel analysis of {} lists using virtual threads", lists.size());
+
+      // Create futures for parallel processing using virtual threads
+      List<CompletableFuture<Integer>> subscriberCountFutures = new ArrayList<>();
+      List<CompletableFuture<Integer>> tagCountFutures = new ArrayList<>();
+
+      // Process each list in parallel using virtual threads
+      for (var list : lists) {
+        // Get member count in parallel (optimized API call)
+        CompletableFuture<Integer> subscriberCountFuture = CompletableFuture
+            .supplyAsync(() -> {
+              try {
+                int count = mailchimpService.getMemberCount(list.getId());
+                log.debug("List '{}' has {} members", list.getName(), count);
+                return count;
+              } catch (Exception e) {
+                log.warn("Failed to get member count for list '{}': {}", list.getName(), e.getMessage());
+                return 0;
+              }
+            }, virtualThreadExecutor);
+        subscriberCountFutures.add(subscriberCountFuture);
+
+        // Get tag count in parallel
+        CompletableFuture<Integer> tagCountFuture = CompletableFuture
+            .supplyAsync(() -> {
+              try {
+                var tags = mailchimpService.getAllTags(list.getId());
+                log.debug("List '{}' has {} tags", list.getName(), tags.size());
+                return tags.size();
+              } catch (Exception e) {
+                log.warn("Failed to get tags for list '{}': {}", list.getName(), e.getMessage());
+                return 0;
+              }
+            }, virtualThreadExecutor);
+        tagCountFutures.add(tagCountFuture);
+      }
+
+      // Get e-commerce data in parallel
+      CompletableFuture<Integer> ecommerceShopsFuture = CompletableFuture
+          .supplyAsync(() -> {
+            try {
+              var shops = mailchimpService.getAllEcommerceShops();
+              log.debug("Found {} e-commerce shops", shops.size());
+              return shops.size();
+            } catch (Exception e) {
+              log.warn("Failed to get e-commerce shops: {}", e.getMessage());
+              return 0;
+            }
+          }, virtualThreadExecutor);
+
+      // Wait for all futures to complete and sum results
+      int totalSubscribers = subscriberCountFutures.stream()
+          .mapToInt(CompletableFuture::join)
+          .sum();
+
+      int totalTags = tagCountFutures.stream()
+          .mapToInt(CompletableFuture::join)
+          .sum();
+
+      int totalEcommerceShops = ecommerceShopsFuture.join();
+
+      // Set results
       analysisBuilder.totalSubscribers(totalSubscribers);
       analysisBuilder.totalTags(totalTags);
-
-      // Analyze e-commerce data
-      var shops = mailchimpService.getAllEcommerceShops();
-      analysisBuilder.totalEcommerceShops(shops.size());
+      analysisBuilder.totalEcommerceShops(totalEcommerceShops);
 
       // Estimate migration time (rough calculation)
-      long estimatedMinutes = calculateEstimatedTime(totalSubscribers, totalTags, shops.size());
+      long estimatedMinutes = calculateEstimatedTime(totalSubscribers, totalTags, totalEcommerceShops);
       analysisBuilder.estimatedMigrationTimeMinutes(estimatedMinutes);
+
+      log.info("Analysis completed: {} subscribers, {} tags, {} shops across {} lists", 
+               totalSubscribers, totalTags, totalEcommerceShops, lists.size());
 
       return analysisBuilder.build();
 

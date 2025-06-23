@@ -72,6 +72,25 @@ public class MailchimpService {
     return allMembers;
   }
 
+  public int getMemberCount(String listId) {
+    // Get only the stats from the list endpoint, which includes member count without fetching all members
+    Map<String, Object> response =
+        apiClient.get(
+            "/lists/{listId}?fields=stats.member_count",
+            new ParameterizedTypeReference<Map<String, Object>>() {},
+            listId);
+
+    @SuppressWarnings("unchecked")
+    Map<String, Object> stats = (Map<String, Object>) response.get("stats");
+    
+    if (stats != null && stats.containsKey("member_count")) {
+      return (Integer) stats.get("member_count");
+    }
+    
+    log.warn("Could not get member count for list {}, falling back to 0", listId);
+    return 0;
+  }
+
   public List<String> getAllTags(String listId) {
     Set<String> allTags = new HashSet<>();
 
