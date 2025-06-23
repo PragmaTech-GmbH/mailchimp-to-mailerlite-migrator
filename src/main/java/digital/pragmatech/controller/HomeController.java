@@ -86,7 +86,7 @@ public class HomeController {
       if (result.isValid()) {
         return ApiResponse.success("API connections validated successfully", result);
       } else {
-        return ApiResponse.<MigrationValidator.ValidationResult>error("API validation failed");
+        return ApiResponse.error("API validation failed");
       }
     } catch (Exception e) {
       log.error("API validation failed", e);
@@ -161,7 +161,7 @@ public class HomeController {
         storeInfo.put("name", store.getName());
         storeInfo.put("domain", store.getDomain());
         storeInfo.put("currencyCode", store.getCurrency());
-        
+
         // Get additional store statistics
         try {
           // These would need to be implemented in MailchimpService
@@ -175,7 +175,7 @@ public class HomeController {
           storeInfo.put("orders", 0);
           storeInfo.put("revenue", "N/A");
         }
-        
+
         storeData.add(storeInfo);
       }
 

@@ -55,7 +55,7 @@ fi
 echo ""
 
 echo ""
-echo "🔥 Starting application on http://localhost:8080"
+echo "🔥 Starting application in DEVELOPMENT mode on http://localhost:8080"
 echo ""
 echo "📋 Once the application starts:"
 echo "   1. Open http://localhost:8080 in your browser"
@@ -66,7 +66,20 @@ else
 fi
 echo "   3. Follow the migration wizard"
 echo ""
+echo "🔄 Development Features Enabled:"
+echo "   • Hot reload - Code changes will automatically restart the app"
+echo "   • LiveReload - Browser will refresh when static files change"
+echo "   • Extended classpath monitoring"
+echo ""
 echo "💡 To stop the application, press Ctrl+C"
 echo ""
 
-./mvnw spring-boot:run
+# Set development profile and enable devtools features
+export SPRING_PROFILES_ACTIVE=dev
+export SPRING_DEVTOOLS_RESTART_ENABLED=true
+export SPRING_DEVTOOLS_LIVERELOAD_ENABLED=true
+
+# Run with spring-boot-devtools optimizations
+./mvnw spring-boot:run \
+    -Dspring-boot.run.jvmArguments="-Dspring.devtools.restart.enabled=true -Dspring.devtools.livereload.enabled=true -Dspring.devtools.restart.poll-interval=2s -Dspring.devtools.restart.quiet-period=1s" \
+    -Dspring-boot.run.fork=true

@@ -37,11 +37,11 @@ This is a Spring Boot 3.5.0 application for migrating email marketing data from 
 
 ### Development
 ```bash
-# Run the application
-./mvnw spring-boot:run
-
-# Run with environment variables loaded from .env file
+# Run the application in development mode with hot reload
 ./run.sh
+
+# Run the application without devtools (production-like)
+./mvnw spring-boot:run
 
 # Run with Docker Compose
 docker compose up
@@ -49,6 +49,18 @@ docker compose up
 # Build Docker image
 docker build -t mailchimp-migrator .
 ```
+
+### Development Features
+The `./run.sh` script enables several development-friendly features:
+
+- **Hot Reload**: Code changes automatically restart the application
+- **LiveReload**: Browser refreshes when static files (CSS, JS, templates) change
+- **Template Hot Reload**: Thymeleaf templates reload without restart
+- **Extended Logging**: More detailed logging for debugging
+- **Faster Migration Settings**: Reduced batch sizes and timeouts for testing
+- **Development Profile**: Loads `application-dev.yml` configuration
+
+**LiveReload Browser Extension**: For automatic browser refresh, install the LiveReload browser extension and enable it on localhost:8080.
 
 ### Environment Variables Support
 The application supports pre-configuring API keys via environment variables:

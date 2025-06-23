@@ -121,11 +121,13 @@ public class MailerLiteApiClient {
 
   public boolean testConnection() {
     try {
+      // Test connection by trying to fetch groups (simpler endpoint that requires minimal permissions)
       Map<String, Object> response =
-          get("/me", new ParameterizedTypeReference<Map<String, Object>>() {});
+          get("/groups", new ParameterizedTypeReference<Map<String, Object>>() {});
+      // MailerLite API returns data in a "data" field for successful responses
       return response != null && response.containsKey("data");
     } catch (Exception e) {
-      log.error("Failed to test MailerLite connection", e);
+      log.debug("Failed to test MailerLite connection: {}", e.getMessage());
       return false;
     }
   }
