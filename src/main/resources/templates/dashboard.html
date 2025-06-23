@@ -150,27 +150,45 @@
     </div>
 
     <div th:fragment="scripts">
-        <!-- SockJS and STOMP from Webjars -->
-        <script th:src="@{/webjars/sockjs-client/1.5.1/sockjs.min.js}"></script>
-        <script th:src="@{/webjars/stomp-websocket/2.3.4/stomp.min.js}"></script>
-        
         <script>
-            let stompClient = null;
             let migrationStatus = null;
+            let pollingInterval = null;
 
-            // Initialize WebSocket connection
-            function connectWebSocket() {
-                const socket = new SockJS('/ws-migration');
-                stompClient = Stomp.over(socket);
+            // Poll for migration status
+            function startPolling() {
+                // Poll immediately
+                pollMigrationStatus();
                 
-                stompClient.connect({}, function(frame) {
-                    console.log('Connected to WebSocket');
-                    
-                    stompClient.subscribe('/topic/migration-progress', function(message) {
-                        const status = JSON.parse(message.body);
-                        updateMigrationDisplay(status);
+                // Then poll every 2 seconds
+                pollingInterval = setInterval(pollMigrationStatus, 2000);
+            }
+
+            function stopPolling() {
+                if (pollingInterval) {
+                    clearInterval(pollingInterval);
+                    pollingInterval = null;
+                }
+            }
+
+            function pollMigrationStatus() {
+                fetch('/api/migration/status')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.data) {
+                            updateMigrationDisplay(data.data);
+                            
+                            // Stop polling if migration is completed or failed
+                            if (data.data.state === 'COMPLETED' || data.data.state === 'FAILED') {
+                                stopPolling();
+                            }
+                        } else {
+                            // No active migration, stop polling
+                            stopPolling();
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error polling migration status:', error);
                     });
-                });
             }
 
             // API calls
@@ -182,6 +200,7 @@
                             showMessage('Migration started successfully!', 'success');
                             document.getElementById('progress-section').classList.remove('hidden');
                             updateControlButtons('in_progress');
+                            startPolling(); // Start polling when migration starts
                         } else {
                             showMessage('Failed to start migration: ' + data.message, 'error');
                         }
@@ -346,8 +365,6 @@
 
             // Initialize on page load
             document.addEventListener('DOMContentLoaded', function() {
-                connectWebSocket();
-                
                 // Check current migration status
                 fetch('/api/migration/status')
                     .then(response => response.json())
@@ -355,6 +372,11 @@
                         if (data.success && data.data) {
                             updateMigrationDisplay(data.data);
                             document.getElementById('progress-section').classList.remove('hidden');
+                            
+                            // Start polling if migration is in progress
+                            if (data.data.state === 'IN_PROGRESS' || data.data.state === 'PAUSED') {
+                                startPolling();
+                            }
                         }
                     })
                     .catch(error => console.log('No active migration'));

@@ -1,9 +1,7 @@
 package digital.pragmatech.service.migration;
 
 import digital.pragmatech.model.common.MigrationStatus;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -12,10 +10,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class MigrationProgressTracker {
-    
-    private final SimpMessagingTemplate messagingTemplate;
     
     private final AtomicReference<MigrationStatus> currentMigrationStatus = new AtomicReference<>();
     private final ConcurrentHashMap<String, Object> metrics = new ConcurrentHashMap<>();
@@ -231,13 +226,6 @@ public class MigrationProgressTracker {
     }
     
     private void broadcastUpdate() {
-        MigrationStatus current = currentMigrationStatus.get();
-        if (current != null) {
-            try {
-                messagingTemplate.convertAndSend("/topic/migration-progress", current);
-            } catch (Exception e) {
-                log.warn("Failed to broadcast migration update via WebSocket", e);
-            }
-        }
+        // No-op: WebSocket broadcasting removed, status is now polled via REST API
     }
 }

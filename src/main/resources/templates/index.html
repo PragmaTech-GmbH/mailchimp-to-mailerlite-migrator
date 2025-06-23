@@ -28,6 +28,7 @@
                 <div>
                     <label for="mailchimpApiKey" class="block text-sm font-medium text-gray-700 mb-1">
                         Mailchimp API Key
+                        <span id="mailchimp-configured-indicator" class="hidden text-green-600 ml-2">●●●●●●●●</span>
                     </label>
                     <input type="password" 
                            th:field="*{mailchimpApiKey}" 
@@ -47,6 +48,7 @@
                 <div>
                     <label for="mailerLiteApiToken" class="block text-sm font-medium text-gray-700 mb-1">
                         MailerLite API Token
+                        <span id="mailerlite-configured-indicator" class="hidden text-green-600 ml-2">●●●●●●●●</span>
                     </label>
                     <input type="password" 
                            th:field="*{mailerLiteApiToken}" 
@@ -125,6 +127,33 @@
         <script th:src="@{/webjars/htmx.org/1.9.12/dist/htmx.min.js}"></script>
         
         <script>
+            // Check if API keys are pre-configured and show indicators
+            document.addEventListener('DOMContentLoaded', function() {
+                fetch('/api/keys-configured')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.data) {
+                            if (data.data.mailchimp) {
+                                document.getElementById('mailchimp-configured-indicator').classList.remove('hidden');
+                                // Show placeholder to indicate pre-configured
+                                const input = document.getElementById('mailchimpApiKey');
+                                if (input && !input.value) {
+                                    input.placeholder = 'Pre-configured from environment (●●●●●●●●)';
+                                }
+                            }
+                            if (data.data.mailerlite) {
+                                document.getElementById('mailerlite-configured-indicator').classList.remove('hidden');
+                                // Show placeholder to indicate pre-configured
+                                const input = document.getElementById('mailerLiteApiToken');
+                                if (input && !input.value) {
+                                    input.placeholder = 'Pre-configured from environment (●●●●●●●●)';
+                                }
+                            }
+                        }
+                    })
+                    .catch(error => console.error('Failed to check API key configuration:', error));
+            });
+            
             function validateConnections() {
                 const btn = document.getElementById('validate-btn');
                 const status = document.getElementById('validation-status');

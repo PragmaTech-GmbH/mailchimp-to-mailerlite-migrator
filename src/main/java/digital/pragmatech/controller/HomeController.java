@@ -113,6 +113,17 @@ public class HomeController {
                 });
     }
     
+    @GetMapping("/api/keys-configured")
+    @ResponseBody
+    public ApiResponse<Map<String, Boolean>> checkApiKeysConfigured() {
+        Map<String, Boolean> status = new HashMap<>();
+        status.put("mailchimp", apiConfiguration.getMailchimp().getDefaultApiKey() != null && 
+                                !apiConfiguration.getMailchimp().getDefaultApiKey().isEmpty());
+        status.put("mailerlite", apiConfiguration.getMailerlite().getDefaultApiToken() != null && 
+                                 !apiConfiguration.getMailerlite().getDefaultApiToken().isEmpty());
+        return ApiResponse.success("API keys configuration status", status);
+    }
+    
     @GetMapping("/api/tags")
     @ResponseBody
     public CompletableFuture<ApiResponse<Map<String, List<String>>>> getMailchimpTags() {
