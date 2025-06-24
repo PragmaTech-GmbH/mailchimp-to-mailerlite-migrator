@@ -165,14 +165,15 @@ public class MigrationController {
       @SuppressWarnings("unchecked")
       List<String> selectedStores = (List<String>) request.get("selectedStores");
       Integer sampleSize = (Integer) request.get("sampleSize");
-      
+
       if (sampleSize == null) {
         sampleSize = 250; // Default sample size
       }
 
       Map<String, Object> result =
           migrationOrchestrator.testMigrateSubscribers(selectedTags, selectedStores, sampleSize);
-      return ResponseEntity.ok(ApiResponse.success("Test migration completed successfully", result));
+      return ResponseEntity.ok(
+          ApiResponse.success("Test migration completed successfully", result));
     } catch (Exception e) {
       log.error("Failed to test migrate subscribers", e);
       return ResponseEntity.ok(

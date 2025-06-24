@@ -275,6 +275,167 @@ public class MigrationOrchestrator {
     }
   }
 
+  public Map<String, Object> testMigrateSubscribers(
+      List<String> selectedTags, List<String> selectedStores, int sampleSize) {
+    log.info(
+        "Starting test subscriber migration with {} selected tags, {} selected stores, sample size: {}",
+        selectedTags != null ? selectedTags.size() : 0,
+        selectedStores != null ? selectedStores.size() : 0,
+        sampleSize);
+
+    try {
+      progressTracker.updatePhase(MigrationStatus.MigrationPhase.SUBSCRIBER_MIGRATION);
+
+      // First, create tag-to-group mapping for selected tags
+      Map<String, String> tagToGroupMapping = new HashMap<>();
+      if (selectedTags != null) {
+        for (String tag : selectedTags) {
+          try {
+            // Try to find existing group by name
+            List<MailerLiteGroup> groups = mailerLiteService.getAllGroups();
+            String cleanedTag = cleanTagName(tag);
+            for (MailerLiteGroup group : groups) {
+              if (group.getName().equals(cleanedTag)) {
+                tagToGroupMapping.put(tag, group.getId());
+                break;
+              }
+            }
+          } catch (Exception e) {
+            log.warn("Could not map tag '{}' to group: {}", tag, e.getMessage());
+          }
+        }
+      }
+
+      List<MailchimpList> lists = mailchimpService.getAllLists();
+      int totalSubscribers = 0;
+      int migratedSubscribers = 0;
+      int failedSubscribers = 0;
+      List<String> processedLists = new ArrayList<>();
+
+      // Calculate total available subscribers first (but don't fetch them all)
+      int availableSubscribers = 0;
+      for (MailchimpList list : lists) {
+        availableSubscribers += mailchimpService.getMemberCount(list.getId());
+      }
+
+      // Adjust sample size if it's larger than available subscribers
+      int actualSampleSize = Math.min(sampleSize, availableSubscribers);
+      log.info(
+          "Test migration will process {} subscribers out of {} available",
+          actualSampleSize,
+          availableSubscribers);
+
+      int remaining = actualSampleSize;
+
+      for (MailchimpList list : lists) {
+        if (remaining <= 0) {
+          break; // We've reached our sample limit
+        }
+
+        // Only fetch the number of subscribers we actually need from this list
+        int subscribersFromThisList = Math.min(remaining, 100); // Max 100 per list for test
+        List<MailchimpMember> members =
+            mailchimpService.getLimitedMembers(list.getId(), subscribersFromThisList);
+
+        if (members.isEmpty()) {
+          log.debug("No members found in list: {}", list.getName());
+          continue;
+        }
+
+        processedLists.add(list.getName());
+        totalSubscribers += members.size();
+        remaining -= members.size();
+
+        log.info(
+            "Test migration: fetched {} members from list '{}', remaining to fetch: {}",
+            members.size(),
+            list.getName(),
+            remaining);
+
+        // Process in smaller batches for the test
+        List<List<MailchimpMember>> batches =
+            partitionList(members, 25); // Smaller batches for test
+
+        for (List<MailchimpMember> batch : batches) {
+          try {
+            List<Subscriber> subscribers =
+                batch.stream().map(this::convertToSubscriber).collect(Collectors.toList());
+
+            // Bulk import subscribers
+            mailerLiteService.bulkImportSubscribers(subscribers, null);
+
+            // Assign to groups based on selected tags only
+            if (!tagToGroupMapping.isEmpty()) {
+              for (MailchimpMember member : batch) {
+                assignMemberToSelectedGroups(member, tagToGroupMapping, selectedTags);
+              }
+            }
+
+            migratedSubscribers += batch.size();
+            progressTracker.updateProgress(
+                actualSampleSize,
+                migratedSubscribers + failedSubscribers,
+                migratedSubscribers,
+                failedSubscribers);
+
+            log.debug(
+                "Test migration: migrated batch of {} subscribers, total migrated: {}",
+                batch.size(),
+                migratedSubscribers);
+
+            // Shorter rate limiting for test
+            Thread.sleep(300);
+
+          } catch (Exception e) {
+            log.error("Failed to migrate test subscriber batch", e);
+            failedSubscribers += batch.size();
+            progressTracker.addError(
+                "TEST_SUBSCRIBER_MIGRATION",
+                "Batch",
+                "test_batch",
+                e.getMessage(),
+                "TEST_BATCH_MIGRATION_FAILED",
+                true);
+            progressTracker.updateProgress(
+                actualSampleSize,
+                migratedSubscribers + failedSubscribers,
+                migratedSubscribers,
+                failedSubscribers);
+          }
+        }
+      }
+
+      // Create result summary
+      Map<String, Object> result = new HashMap<>();
+      result.put("totalSubscribers", totalSubscribers);
+      result.put("migratedSubscribers", migratedSubscribers);
+      result.put("failedSubscribers", failedSubscribers);
+      result.put("processedLists", processedLists);
+      result.put("selectedTags", selectedTags != null ? selectedTags : new ArrayList<>());
+      result.put("groupsMapped", tagToGroupMapping.size());
+      result.put("sampleSize", actualSampleSize);
+      result.put("availableSubscribers", availableSubscribers);
+      result.put("isTestMigration", true);
+      result.put("fetchedSubscribers", totalSubscribers);
+      result.put("optimizedFetch", true);
+      result.put("completedAt", LocalDateTime.now());
+
+      // Store result for UI access
+      progressTracker.setStepResult("test_subscriber_migration", result);
+
+      log.info(
+          "Test subscriber migration completed. Migrated {}/{} subscribers (sample size: {})",
+          migratedSubscribers,
+          totalSubscribers,
+          actualSampleSize);
+      return result;
+
+    } catch (Exception e) {
+      log.error("Test subscriber migration failed", e);
+      throw new RuntimeException("Test subscriber migration failed", e);
+    }
+  }
+
   public Map<String, Object> syncOrders(List<String> selectedStores) {
     log.info("Starting order sync for {} selected stores", selectedStores.size());
 

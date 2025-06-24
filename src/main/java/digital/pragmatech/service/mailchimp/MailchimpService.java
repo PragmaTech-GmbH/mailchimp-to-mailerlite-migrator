@@ -75,6 +75,55 @@ public class MailchimpService {
     return allMembers;
   }
 
+  public List<MailchimpMember> getLimitedMembers(String listId, int limit) {
+    List<MailchimpMember> members = new ArrayList<>();
+    int offset = 0;
+    int count = Math.min(limit, 1000); // Mailchimp max is 1000 per request
+    int remaining = limit;
+
+    while (remaining > 0 && count > 0) {
+      int requestCount = Math.min(remaining, count);
+
+      Map<String, Object> response =
+          apiClient.get(
+              "/lists/{listId}/members?count={count}&offset={offset}&status=subscribed,unsubscribed,cleaned,pending",
+              new ParameterizedTypeReference<Map<String, Object>>() {},
+              listId,
+              requestCount,
+              offset);
+
+      @SuppressWarnings("unchecked")
+      List<Map<String, Object>> responseMembers =
+          (List<Map<String, Object>>) response.get("members");
+
+      if (responseMembers == null || responseMembers.isEmpty()) {
+        break; // No more members available
+      }
+
+      List<MailchimpMember> batchMembers =
+          responseMembers.stream().map(this::mapToMailchimpMember).collect(Collectors.toList());
+      members.addAll(batchMembers);
+
+      remaining -= batchMembers.size();
+      offset += batchMembers.size();
+
+      log.debug(
+          "Fetched {} members for list {} (limit: {}), remaining: {}",
+          batchMembers.size(),
+          listId,
+          limit,
+          remaining);
+
+      // If we got fewer members than requested, we've reached the end
+      if (batchMembers.size() < requestCount) {
+        break;
+      }
+    }
+
+    log.info("Fetched {} out of requested {} members for list {}", members.size(), limit, listId);
+    return members;
+  }
+
   public int getMemberCount(String listId) {
     // Get only the stats from the list endpoint, which includes member count without fetching all
     // members
