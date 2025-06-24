@@ -84,8 +84,15 @@ public class MailerLiteService {
   }
 
   public void assignSubscriberToGroup(String subscriberId, String groupId) {
+    // MailerLite API expects a POST to assign subscriber to group
     apiClient.post(
-        "/subscribers/{subscriberId}/groups/{groupId}", null, Void.class, subscriberId, groupId);
+        "/subscribers/{subscriberId}/groups/{groupId}",
+        null,
+        new ParameterizedTypeReference<Map<String, Object>>() {},
+        subscriberId,
+        groupId);
+
+    log.debug("Assigned subscriber {} to group {}", subscriberId, groupId);
   }
 
   public void bulkImportSubscribers(List<Subscriber> subscribers, String groupId) {
@@ -96,9 +103,10 @@ public class MailerLiteService {
     List<Map<String, Object>> subscriberRequests =
         subscribers.stream().map(this::mapSubscriberForImport).collect(Collectors.toList());
 
-    Map<String, Object> request = Map.of("subscribers", subscriberRequests);
-
     if (groupId != null) {
+      // Use the correct bulk import endpoint for groups
+      Map<String, Object> request = Map.of("subscribers", subscriberRequests);
+
       Map<String, Object> response =
           apiClient.post(
               "/groups/{groupId}/import-subscribers",
@@ -108,13 +116,30 @@ public class MailerLiteService {
 
       log.info("Bulk import initiated for group {}: {}", groupId, response);
     } else {
-      Map<String, Object> response =
-          apiClient.post(
-              "/import-subscribers",
-              request,
-              new ParameterizedTypeReference<Map<String, Object>>() {});
+      // For bulk import without specific group, create subscribers individually
+      // MailerLite doesn't have a global bulk import endpoint
+      log.info("Creating {} subscribers individually (no group specified)", subscribers.size());
 
-      log.info("Bulk import initiated: {}", response);
+      int successCount = 0;
+      int failCount = 0;
+
+      for (Subscriber subscriber : subscribers) {
+        try {
+          createOrUpdateSubscriber(subscriber);
+          successCount++;
+
+          // Small delay to respect rate limits (120 requests per minute = ~500ms per request)
+          Thread.sleep(500);
+        } catch (Exception e) {
+          failCount++;
+          log.warn("Failed to create subscriber {}: {}", subscriber.getEmail(), e.getMessage());
+        }
+      }
+
+      log.info(
+          "Individual subscriber creation completed. Success: {}, Failed: {}",
+          successCount,
+          failCount);
     }
   }
 

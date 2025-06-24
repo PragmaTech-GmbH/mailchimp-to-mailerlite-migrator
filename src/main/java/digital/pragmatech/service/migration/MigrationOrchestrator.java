@@ -211,25 +211,26 @@ public class MigrationOrchestrator {
             List<Subscriber> subscribers =
                 batch.stream().map(this::convertToSubscriber).collect(Collectors.toList());
 
-            // Bulk import subscribers
-            mailerLiteService.bulkImportSubscribers(subscribers, null);
+            // Create subscribers individually (MailerLite doesn't have global bulk import)
+            int batchSuccessCount = 0;
+            for (Subscriber subscriber : subscribers) {
+              try {
+                mailerLiteService.createOrUpdateSubscriber(subscriber);
+                batchSuccessCount++;
 
-            // Assign to groups based on selected tags only
-            if (!tagToGroupMapping.isEmpty()) {
-              for (MailchimpMember member : batch) {
-                assignMemberToSelectedGroups(member, tagToGroupMapping, selectedTags);
+                // Rate limiting - MailerLite allows 120 requests per minute
+                Thread.sleep(500);
+              } catch (Exception e) {
+                log.warn("Failed to create subscriber: {}", subscriber.getEmail(), e);
               }
             }
 
-            migratedSubscribers += batch.size();
+            migratedSubscribers += batchSuccessCount;
             progressTracker.updateProgress(
                 totalSubscribers,
                 migratedSubscribers + failedSubscribers,
                 migratedSubscribers,
                 failedSubscribers);
-
-            // Rate limiting
-            Thread.sleep(1000);
 
           } catch (Exception e) {
             log.error("Failed to migrate subscriber batch", e);
@@ -361,17 +362,21 @@ public class MigrationOrchestrator {
             List<Subscriber> subscribers =
                 batch.stream().map(this::convertToSubscriber).collect(Collectors.toList());
 
-            // Bulk import subscribers
-            mailerLiteService.bulkImportSubscribers(subscribers, null);
+            // Create subscribers individually (MailerLite doesn't have global bulk import)
+            int batchSuccessCount = 0;
+            for (Subscriber subscriber : subscribers) {
+              try {
+                mailerLiteService.createOrUpdateSubscriber(subscriber);
+                batchSuccessCount++;
 
-            // Assign to groups based on selected tags only
-            if (!tagToGroupMapping.isEmpty()) {
-              for (MailchimpMember member : batch) {
-                assignMemberToSelectedGroups(member, tagToGroupMapping, selectedTags);
+                // Small delay between individual creates to respect rate limits
+                Thread.sleep(100);
+              } catch (Exception e) {
+                log.warn("Failed to create subscriber during test: {}", subscriber.getEmail(), e);
               }
             }
 
-            migratedSubscribers += batch.size();
+            migratedSubscribers += batchSuccessCount;
             progressTracker.updateProgress(
                 actualSampleSize,
                 migratedSubscribers + failedSubscribers,
@@ -379,12 +384,10 @@ public class MigrationOrchestrator {
                 failedSubscribers);
 
             log.debug(
-                "Test migration: migrated batch of {} subscribers, total migrated: {}",
+                "Test migration: migrated batch of {}/{} subscribers, total migrated: {}",
+                batchSuccessCount,
                 batch.size(),
                 migratedSubscribers);
-
-            // Shorter rate limiting for test
-            Thread.sleep(300);
 
           } catch (Exception e) {
             log.error("Failed to migrate test subscriber batch", e);
