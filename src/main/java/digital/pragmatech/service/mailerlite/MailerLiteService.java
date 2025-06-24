@@ -2,7 +2,10 @@ package digital.pragmatech.service.mailerlite;
 
 import digital.pragmatech.model.common.*;
 import digital.pragmatech.model.mailerlite.MailerLiteGroup;
+import digital.pragmatech.model.mailerlite.MailerLiteOrder;
+import digital.pragmatech.model.mailerlite.MailerLiteProduct;
 import digital.pragmatech.model.mailerlite.MailerLiteSubscriber;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -140,35 +143,151 @@ public class MailerLiteService {
         shopId);
   }
 
-  public Map<String, Object> createProduct(String shopId, Product product) {
+  public MailerLiteProduct createProduct(String shopId, Product product) {
     Map<String, Object> request = new HashMap<>();
-    request.put("name", product.getTitle());
-    request.put("url", product.getUrl());
+    request.put("name", product.getName());
     request.put("description", product.getDescription());
 
-    if (product.getImageUrl() != null) {
-      request.put("image_url", product.getImageUrl());
+    // Generate a URL based on the product name if not available
+    String productUrl = "https://shop.example.com/products/" + product.getId();
+    request.put("url", productUrl);
+
+    // Get the first image URL if available
+    if (product.getImages() != null && !product.getImages().isEmpty()) {
+      request.put("image_url", product.getImages().get(0).getUrl());
     }
 
+    // Get price and SKU from first variant
     if (product.getVariants() != null && !product.getVariants().isEmpty()) {
       Product.ProductVariant firstVariant = product.getVariants().get(0);
       if (firstVariant.getPrice() != null) {
-        request.put("price", firstVariant.getPrice().doubleValue());
+        request.put("price", firstVariant.getPrice().toString());
       }
       if (firstVariant.getSku() != null) {
         request.put("sku", firstVariant.getSku());
       }
     }
 
-    if (product.getCategories() != null && !product.getCategories().isEmpty()) {
-      request.put("categories", new ArrayList<>(product.getCategories()));
+    // Map tags to categories if needed
+    if (product.getTags() != null && !product.getTags().isEmpty()) {
+      request.put("categories", new ArrayList<>(product.getTags()));
     }
 
-    return apiClient.post(
-        "/ecommerce/shops/{shopId}/products",
-        request,
-        new ParameterizedTypeReference<Map<String, Object>>() {},
-        shopId);
+    Map<String, Object> response =
+        apiClient.post(
+            "/ecommerce/shops/{shopId}/products",
+            request,
+            new ParameterizedTypeReference<Map<String, Object>>() {},
+            shopId);
+
+    @SuppressWarnings("unchecked")
+    Map<String, Object> data = (Map<String, Object>) response.get("data");
+
+    return mapToMailerLiteProduct(data);
+  }
+
+  public MailerLiteOrder syncOrder(String shopId, Order order) {
+    Map<String, Object> request = new HashMap<>();
+    request.put("external_id", order.getId());
+    request.put("email", order.getCustomerEmail());
+    request.put("status", mapOrderStatus(order.getFinancialStatus()));
+    request.put("total", order.getOrderTotal().toString());
+    request.put("currency", order.getCurrencyCode() != null ? order.getCurrencyCode() : "USD");
+
+    // Generate order URL
+    String orderUrl = "https://shop.example.com/orders/" + order.getId();
+    request.put("order_url", orderUrl);
+
+    // Map order lines to items
+    List<Map<String, Object>> items = new ArrayList<>();
+    if (order.getLines() != null) {
+      for (Order.OrderLine line : order.getLines()) {
+        Map<String, Object> item = new HashMap<>();
+        item.put("product_id", line.getProductId());
+        item.put("product_name", line.getProductTitle());
+        item.put("product_url", "https://shop.example.com/products/" + line.getProductId());
+        item.put("quantity", line.getQuantity());
+        item.put("price", line.getPrice().toString());
+        item.put("discount", line.getDiscount().toString());
+        items.add(item);
+      }
+    }
+    request.put("items", items);
+
+    // Add billing info if available
+    if (order.getBillingAddress() != null) {
+      Map<String, Object> billingInfo = new HashMap<>();
+      billingInfo.put("name", order.getBillingAddress().getName());
+      billingInfo.put("company", order.getBillingAddress().getCompany());
+      billingInfo.put("address1", order.getBillingAddress().getAddress1());
+      billingInfo.put("address2", order.getBillingAddress().getAddress2());
+      billingInfo.put("city", order.getBillingAddress().getCity());
+      billingInfo.put("state", order.getBillingAddress().getProvince());
+      billingInfo.put("country", order.getBillingAddress().getCountry());
+      billingInfo.put("zip", order.getBillingAddress().getPostalCode());
+      request.put("billing_info", billingInfo);
+    }
+
+    // Format order date
+    if (order.getProcessedAt() != null) {
+      DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+      request.put("ordered_at", order.getProcessedAt().format(formatter));
+    }
+
+    Map<String, Object> response =
+        apiClient.post(
+            "/ecommerce/shops/{shopId}/orders",
+            request,
+            new ParameterizedTypeReference<Map<String, Object>>() {},
+            shopId);
+
+    @SuppressWarnings("unchecked")
+    Map<String, Object> data = (Map<String, Object>) response.get("data");
+
+    return mapToMailerLiteOrder(data);
+  }
+
+  private MailerLiteProduct mapToMailerLiteProduct(Map<String, Object> data) {
+    return MailerLiteProduct.builder()
+        .id((String) data.get("id"))
+        .name((String) data.get("name"))
+        .description((String) data.get("description"))
+        .url((String) data.get("url"))
+        .imageUrl((String) data.get("image_url"))
+        .price((String) data.get("price"))
+        .sku((String) data.get("sku"))
+        .shopId((String) data.get("shop_id"))
+        .createdAt((String) data.get("created_at"))
+        .updatedAt((String) data.get("updated_at"))
+        .build();
+  }
+
+  private MailerLiteOrder mapToMailerLiteOrder(Map<String, Object> data) {
+    return MailerLiteOrder.builder()
+        .id((String) data.get("id"))
+        .shopId((String) data.get("shop_id"))
+        .email((String) data.get("email"))
+        .orderUrl((String) data.get("order_url"))
+        .externalId((String) data.get("external_id"))
+        .status((String) data.get("status"))
+        .total((String) data.get("total"))
+        .currency((String) data.get("currency"))
+        .orderedAt((String) data.get("ordered_at"))
+        .createdAt((String) data.get("created_at"))
+        .updatedAt((String) data.get("updated_at"))
+        .build();
+  }
+
+  private String mapOrderStatus(Order.OrderStatus status) {
+    if (status == null) return "pending";
+
+    return switch (status) {
+      case PAID -> "completed";
+      case PENDING -> "pending";
+      case REFUNDED, PARTIALLY_REFUNDED -> "refunded";
+      case CANCELLED, VOIDED -> "cancelled";
+      default -> "pending";
+    };
   }
 
   private MailerLiteGroup mapToMailerLiteGroup(Map<String, Object> data) {

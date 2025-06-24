@@ -3,6 +3,9 @@ package digital.pragmatech.service.mailchimp;
 import digital.pragmatech.model.common.*;
 import digital.pragmatech.model.mailchimp.MailchimpList;
 import digital.pragmatech.model.mailchimp.MailchimpMember;
+import digital.pragmatech.model.mailchimp.MailchimpOrder;
+import digital.pragmatech.model.mailchimp.MailchimpProduct;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -73,7 +76,8 @@ public class MailchimpService {
   }
 
   public int getMemberCount(String listId) {
-    // Get only the stats from the list endpoint, which includes member count without fetching all members
+    // Get only the stats from the list endpoint, which includes member count without fetching all
+    // members
     Map<String, Object> response =
         apiClient.get(
             "/lists/{listId}?fields=stats.member_count",
@@ -82,11 +86,11 @@ public class MailchimpService {
 
     @SuppressWarnings("unchecked")
     Map<String, Object> stats = (Map<String, Object>) response.get("stats");
-    
+
     if (stats != null && stats.containsKey("member_count")) {
       return (Integer) stats.get("member_count");
     }
-    
+
     log.warn("Could not get member count for list {}, falling back to 0", listId);
     return 0;
   }
@@ -262,5 +266,277 @@ public class MailchimpService {
       log.warn("Failed to parse datetime: {}", dateTime);
       return null;
     }
+  }
+
+  public List<Product> getStoreProducts(String storeId) {
+    List<Product> allProducts = new ArrayList<>();
+    int offset = 0;
+    int count = 100;
+    boolean hasMore = true;
+
+    while (hasMore) {
+      MailchimpProduct.MailchimpProductsResponse response =
+          apiClient.get(
+              "/ecommerce/stores/{storeId}/products?count={count}&offset={offset}",
+              MailchimpProduct.MailchimpProductsResponse.class,
+              storeId,
+              count,
+              offset);
+
+      if (response.getProducts() == null || response.getProducts().isEmpty()) {
+        hasMore = false;
+      } else {
+        List<Product> batchProducts =
+            response.getProducts().stream().map(this::mapToProduct).collect(Collectors.toList());
+        allProducts.addAll(batchProducts);
+
+        offset += count;
+        hasMore = response.getProducts().size() == count;
+      }
+
+      log.debug(
+          "Fetched {} products for store {}, offset: {}",
+          response.getProducts() != null ? response.getProducts().size() : 0,
+          storeId,
+          offset);
+    }
+
+    return allProducts;
+  }
+
+  public List<Order> getStoreOrders(String storeId) {
+    List<Order> allOrders = new ArrayList<>();
+    int offset = 0;
+    int count = 100;
+    boolean hasMore = true;
+
+    while (hasMore) {
+      MailchimpOrder.MailchimpOrdersResponse response =
+          apiClient.get(
+              "/ecommerce/stores/{storeId}/orders?count={count}&offset={offset}",
+              MailchimpOrder.MailchimpOrdersResponse.class,
+              storeId,
+              count,
+              offset);
+
+      if (response.getOrders() == null || response.getOrders().isEmpty()) {
+        hasMore = false;
+      } else {
+        List<Order> batchOrders =
+            response.getOrders().stream().map(this::mapToOrder).collect(Collectors.toList());
+        allOrders.addAll(batchOrders);
+
+        offset += count;
+        hasMore = response.getOrders().size() == count;
+      }
+
+      log.debug(
+          "Fetched {} orders for store {}, offset: {}",
+          response.getOrders() != null ? response.getOrders().size() : 0,
+          storeId,
+          offset);
+    }
+
+    return allOrders;
+  }
+
+  private Product mapToProduct(MailchimpProduct mailchimpProduct) {
+    List<Product.ProductVariant> variants = new ArrayList<>();
+    if (mailchimpProduct.getVariants() != null) {
+      variants =
+          mailchimpProduct.getVariants().stream()
+              .map(this::mapToProductVariant)
+              .collect(Collectors.toList());
+    }
+
+    List<Product.ProductImage> images = new ArrayList<>();
+    if (mailchimpProduct.getImages() != null) {
+      images =
+          mailchimpProduct.getImages().stream()
+              .map(this::mapToProductImage)
+              .collect(Collectors.toList());
+    }
+
+    return Product.builder()
+        .id(mailchimpProduct.getId())
+        .name(mailchimpProduct.getTitle())
+        .description(mailchimpProduct.getDescription())
+        .handle(mailchimpProduct.getHandle())
+        .productType(mailchimpProduct.getType())
+        .vendor(mailchimpProduct.getVendor())
+        .status(Product.ProductStatus.ACTIVE)
+        .variants(variants)
+        .images(images)
+        .createdAt(parseDateTime(mailchimpProduct.getPublishedAtForeign()))
+        .updatedAt(LocalDateTime.now())
+        .build();
+  }
+
+  private Product.ProductVariant mapToProductVariant(
+      MailchimpProduct.MailchimpProductVariant variant) {
+    return Product.ProductVariant.builder()
+        .id(variant.getId())
+        .sku(variant.getSku())
+        .title(variant.getTitle())
+        .price(new BigDecimal(variant.getPrice() != null ? variant.getPrice() : "0"))
+        .inventoryQuantity(variant.getInventoryQuantity())
+        .trackInventory(true)
+        .status(Product.ProductVariant.VariantStatus.ACTIVE)
+        .createdAt(parseDateTime(variant.getCreatedAt()))
+        .updatedAt(parseDateTime(variant.getUpdatedAt()))
+        .build();
+  }
+
+  private Product.ProductImage mapToProductImage(MailchimpProduct.MailchimpProductImage image) {
+    return Product.ProductImage.builder()
+        .id(image.getId())
+        .url(image.getUrl())
+        .variantIds(image.getVariantIds())
+        .createdAt(LocalDateTime.now())
+        .updatedAt(LocalDateTime.now())
+        .build();
+  }
+
+  private Order mapToOrder(MailchimpOrder mailchimpOrder) {
+    Customer customer = null;
+    if (mailchimpOrder.getCustomer() != null) {
+      customer = mapToCustomer(mailchimpOrder.getCustomer());
+    }
+
+    List<Order.OrderLine> lines = new ArrayList<>();
+    if (mailchimpOrder.getLines() != null) {
+      lines =
+          mailchimpOrder.getLines().stream().map(this::mapToOrderLine).collect(Collectors.toList());
+    }
+
+    return Order.builder()
+        .id(mailchimpOrder.getId())
+        .storeId(mailchimpOrder.getStoreId())
+        .customerId(customer != null ? customer.getId() : null)
+        .customerEmail(customer != null ? customer.getEmail() : null)
+        .customer(customer)
+        .financialStatus(mapFinancialStatus(mailchimpOrder.getFinancialStatus()))
+        .fulfillmentStatus(mapFulfillmentStatus(mailchimpOrder.getFulfillmentStatus()))
+        .currencyCode(mailchimpOrder.getCurrencyCode())
+        .orderTotal(
+            new BigDecimal(
+                mailchimpOrder.getOrderTotal() != null ? mailchimpOrder.getOrderTotal() : "0"))
+        .taxTotal(
+            new BigDecimal(
+                mailchimpOrder.getTaxTotal() != null ? mailchimpOrder.getTaxTotal() : "0"))
+        .shippingTotal(
+            new BigDecimal(
+                mailchimpOrder.getShippingTotal() != null
+                    ? mailchimpOrder.getShippingTotal()
+                    : "0"))
+        .discountTotal(
+            new BigDecimal(
+                mailchimpOrder.getDiscountTotal() != null
+                    ? mailchimpOrder.getDiscountTotal()
+                    : "0"))
+        .lines(lines)
+        .shippingAddress(mapToOrderAddress(mailchimpOrder.getShippingAddress()))
+        .billingAddress(mapToOrderAddress(mailchimpOrder.getBillingAddress()))
+        .processedAt(parseDateTime(mailchimpOrder.getProcessedAtForeign()))
+        .cancelledAt(parseDateTime(mailchimpOrder.getCancelledAtForeign()))
+        .createdAt(LocalDateTime.now())
+        .updatedAt(parseDateTime(mailchimpOrder.getUpdatedAtForeign()))
+        .build();
+  }
+
+  private Customer mapToCustomer(MailchimpOrder.MailchimpCustomer mailchimpCustomer) {
+    return Customer.builder()
+        .id(mailchimpCustomer.getId())
+        .email(mailchimpCustomer.getEmailAddress())
+        .firstName(mailchimpCustomer.getFirstName())
+        .lastName(mailchimpCustomer.getLastName())
+        .company(mailchimpCustomer.getCompany())
+        .emailMarketingConsent(mailchimpCustomer.getOptInStatus())
+        .totalSpent(
+            new BigDecimal(
+                mailchimpCustomer.getTotalSpent() != null
+                    ? mailchimpCustomer.getTotalSpent()
+                    : "0"))
+        .ordersCount(mailchimpCustomer.getOrdersCount())
+        .status(Customer.CustomerStatus.ACTIVE)
+        .defaultAddress(mapToCustomerAddress(mailchimpCustomer.getAddress()))
+        .createdAt(parseDateTime(mailchimpCustomer.getCreatedAt()))
+        .updatedAt(parseDateTime(mailchimpCustomer.getUpdatedAt()))
+        .build();
+  }
+
+  private Order.OrderLine mapToOrderLine(MailchimpOrder.MailchimpOrderLine line) {
+    return Order.OrderLine.builder()
+        .id(line.getId())
+        .productId(line.getProductId())
+        .productVariantId(line.getProductVariantId())
+        .productTitle(line.getProductTitle())
+        .variantTitle(line.getProductVariantTitle())
+        .sku(line.getSku())
+        .quantity(line.getQuantity())
+        .price(new BigDecimal(line.getPrice() != null ? line.getPrice() : "0"))
+        .discount(new BigDecimal(line.getDiscount() != null ? line.getDiscount() : "0"))
+        .total(
+            new BigDecimal(line.getPrice() != null ? line.getPrice() : "0")
+                .multiply(new BigDecimal(line.getQuantity())))
+        .build();
+  }
+
+  private Order.Address mapToOrderAddress(MailchimpOrder.MailchimpAddress address) {
+    if (address == null) return null;
+
+    return Order.Address.builder()
+        .name(address.getName())
+        .company(address.getCompany())
+        .address1(address.getAddress1())
+        .address2(address.getAddress2())
+        .city(address.getCity())
+        .province(address.getProvince())
+        .provinceCode(address.getProvinceCode())
+        .country(address.getCountry())
+        .countryCode(address.getCountryCode())
+        .postalCode(address.getPostalCode())
+        .phone(address.getPhone())
+        .build();
+  }
+
+  private Customer.Address mapToCustomerAddress(MailchimpOrder.MailchimpAddress address) {
+    if (address == null) return null;
+
+    return Customer.Address.builder()
+        .address1(address.getAddress1())
+        .address2(address.getAddress2())
+        .city(address.getCity())
+        .province(address.getProvince())
+        .provinceCode(address.getProvinceCode())
+        .country(address.getCountry())
+        .countryCode(address.getCountryCode())
+        .postalCode(address.getPostalCode())
+        .phone(address.getPhone())
+        .build();
+  }
+
+  private Order.OrderStatus mapFinancialStatus(String status) {
+    if (status == null) return Order.OrderStatus.PENDING;
+
+    return switch (status.toLowerCase()) {
+      case "paid" -> Order.OrderStatus.PAID;
+      case "pending" -> Order.OrderStatus.PENDING;
+      case "refunded" -> Order.OrderStatus.REFUNDED;
+      case "cancelled" -> Order.OrderStatus.CANCELLED;
+      default -> Order.OrderStatus.PENDING;
+    };
+  }
+
+  private Order.FulfillmentStatus mapFulfillmentStatus(String status) {
+    if (status == null) return Order.FulfillmentStatus.PENDING;
+
+    return switch (status.toLowerCase()) {
+      case "shipped" -> Order.FulfillmentStatus.SHIPPED;
+      case "partially_shipped" -> Order.FulfillmentStatus.PARTIALLY_SHIPPED;
+      case "delivered" -> Order.FulfillmentStatus.DELIVERED;
+      case "cancelled" -> Order.FulfillmentStatus.CANCELLED;
+      default -> Order.FulfillmentStatus.PENDING;
+    };
   }
 }

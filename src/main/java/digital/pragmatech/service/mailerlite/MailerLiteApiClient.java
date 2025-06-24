@@ -121,7 +121,8 @@ public class MailerLiteApiClient {
 
   public boolean testConnection() {
     try {
-      // Test connection by trying to fetch groups (simpler endpoint that requires minimal permissions)
+      // Test connection by trying to fetch groups (simpler endpoint that requires minimal
+      // permissions)
       Map<String, Object> response =
           get("/groups", new ParameterizedTypeReference<Map<String, Object>>() {});
       // MailerLite API returns data in a "data" field for successful responses

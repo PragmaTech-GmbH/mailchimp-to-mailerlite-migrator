@@ -100,8 +100,7 @@ public class HomeController {
     try {
       MigrationValidator.PreMigrationAnalysis analysis = migrationValidator.analyzeForMigration();
       if (analysis.hasError()) {
-        return ApiResponse.error(
-            "Analysis failed: " + analysis.getError());
+        return ApiResponse.error("Analysis failed: " + analysis.getError());
       } else {
         return ApiResponse.success("Pre-migration analysis completed", analysis);
       }

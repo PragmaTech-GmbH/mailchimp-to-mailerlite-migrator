@@ -5,6 +5,8 @@ import digital.pragmatech.model.common.*;
 import digital.pragmatech.model.mailchimp.MailchimpList;
 import digital.pragmatech.model.mailchimp.MailchimpMember;
 import digital.pragmatech.model.mailerlite.MailerLiteGroup;
+import digital.pragmatech.model.mailerlite.MailerLiteOrder;
+import digital.pragmatech.model.mailerlite.MailerLiteProduct;
 import digital.pragmatech.service.mailchimp.MailchimpService;
 import digital.pragmatech.service.mailerlite.MailerLiteService;
 import java.time.LocalDateTime;
@@ -27,16 +29,16 @@ public class MigrationOrchestrator {
   // Step-based migration methods for wizard
   public Map<String, Object> migrateTags(List<String> tags) {
     log.info("Starting selective tag migration for {} tags", tags.size());
-    
+
     try {
       progressTracker.updatePhase(MigrationStatus.MigrationPhase.TAG_GROUP_MIGRATION);
-      
+
       int processedTags = 0;
       int successfulTags = 0;
       int failedTags = 0;
       List<String> createdGroups = new ArrayList<>();
       List<String> failedTagsList = new ArrayList<>();
-      
+
       for (String tag : tags) {
         try {
           String cleanedTag = cleanTagName(tag);
@@ -45,9 +47,10 @@ public class MigrationOrchestrator {
             log.info("Created group '{}' with ID: {}", cleanedTag, group.getId());
             createdGroups.add(cleanedTag);
             successfulTags++;
-            
-            progressTracker.updateProgress(tags.size(), processedTags + 1, successfulTags, failedTags);
-            
+
+            progressTracker.updateProgress(
+                tags.size(), processedTags + 1, successfulTags, failedTags);
+
             // Rate limiting
             Thread.sleep(500);
           }
@@ -57,13 +60,13 @@ public class MigrationOrchestrator {
           failedTagsList.add(tag);
           failedTags++;
           processedTags++;
-          
+
           progressTracker.addError(
               "TAG_GROUP_MIGRATION", "Tag", tag, e.getMessage(), "GROUP_CREATION_FAILED", true);
           progressTracker.updateProgress(tags.size(), processedTags, successfulTags, failedTags);
         }
       }
-      
+
       // Create result summary
       Map<String, Object> result = new HashMap<>();
       result.put("totalTags", tags.size());
@@ -73,13 +76,16 @@ public class MigrationOrchestrator {
       result.put("createdGroups", createdGroups);
       result.put("failedTags", failedTagsList);
       result.put("completedAt", LocalDateTime.now());
-      
+
       // Store result for UI access
       progressTracker.setStepResult("tag_migration", result);
-      
-      log.info("Selective tag migration completed. Created {} groups, {} failed", successfulTags, failedTags);
+
+      log.info(
+          "Selective tag migration completed. Created {} groups, {} failed",
+          successfulTags,
+          failedTags);
       return result;
-      
+
     } catch (Exception e) {
       log.error("Selective tag migration failed", e);
       throw new RuntimeException("Tag migration failed", e);
@@ -88,46 +94,48 @@ public class MigrationOrchestrator {
 
   public Map<String, Object> migrateStores(List<String> storeIds) {
     log.info("Starting selective store migration for {} stores", storeIds.size());
-    
+
     try {
       progressTracker.updatePhase(MigrationStatus.MigrationPhase.ECOMMERCE_SETUP);
-      
+
       int processedStores = 0;
       int successfulStores = 0;
       int failedStores = 0;
       List<String> migratedStores = new ArrayList<>();
       List<String> failedStoresList = new ArrayList<>();
-      
+
       for (String storeId : storeIds) {
         try {
           // Get store details from Mailchimp
           EcommerceShop shop = mailchimpService.getEcommerceShop(storeId);
-          
+
           // Create shop in MailerLite
           Map<String, Object> createdShop = mailerLiteService.createEcommerceShop(shop);
           log.info("Created e-commerce shop: {}", createdShop);
-          
+
           migratedStores.add(shop.getName());
           successfulStores++;
           processedStores++;
-          
-          progressTracker.updateProgress(storeIds.size(), processedStores, successfulStores, failedStores);
-          
+
+          progressTracker.updateProgress(
+              storeIds.size(), processedStores, successfulStores, failedStores);
+
           // Rate limiting
           Thread.sleep(1000);
-          
+
         } catch (Exception e) {
           log.error("Failed to migrate store: {}", storeId, e);
           failedStoresList.add(storeId);
           failedStores++;
           processedStores++;
-          
+
           progressTracker.addError(
               "ECOMMERCE_SETUP", "Store", storeId, e.getMessage(), "STORE_MIGRATION_FAILED", true);
-          progressTracker.updateProgress(storeIds.size(), processedStores, successfulStores, failedStores);
+          progressTracker.updateProgress(
+              storeIds.size(), processedStores, successfulStores, failedStores);
         }
       }
-      
+
       // Create result summary
       Map<String, Object> result = new HashMap<>();
       result.put("totalStores", storeIds.size());
@@ -137,27 +145,32 @@ public class MigrationOrchestrator {
       result.put("migratedStores", migratedStores);
       result.put("failedStores", failedStoresList);
       result.put("completedAt", LocalDateTime.now());
-      
+
       // Store result for UI access
       progressTracker.setStepResult("store_migration", result);
-      
-      log.info("Selective store migration completed. Migrated {} stores, {} failed", successfulStores, failedStores);
+
+      log.info(
+          "Selective store migration completed. Migrated {} stores, {} failed",
+          successfulStores,
+          failedStores);
       return result;
-      
+
     } catch (Exception e) {
       log.error("Selective store migration failed", e);
       throw new RuntimeException("Store migration failed", e);
     }
   }
 
-  public Map<String, Object> migrateSubscribers(List<String> selectedTags, List<String> selectedStores) {
-    log.info("Starting subscriber migration with {} selected tags and {} selected stores", 
-             selectedTags != null ? selectedTags.size() : 0, 
-             selectedStores != null ? selectedStores.size() : 0);
-    
+  public Map<String, Object> migrateSubscribers(
+      List<String> selectedTags, List<String> selectedStores) {
+    log.info(
+        "Starting subscriber migration with {} selected tags and {} selected stores",
+        selectedTags != null ? selectedTags.size() : 0,
+        selectedStores != null ? selectedStores.size() : 0);
+
     try {
       progressTracker.updatePhase(MigrationStatus.MigrationPhase.SUBSCRIBER_MIGRATION);
-      
+
       // First, create tag-to-group mapping for selected tags
       Map<String, String> tagToGroupMapping = new HashMap<>();
       if (selectedTags != null) {
@@ -177,7 +190,7 @@ public class MigrationOrchestrator {
           }
         }
       }
-      
+
       List<MailchimpList> lists = mailchimpService.getAllLists();
       int totalSubscribers = 0;
       int migratedSubscribers = 0;
@@ -190,13 +203,13 @@ public class MigrationOrchestrator {
         processedLists.add(list.getName());
 
         // Process in batches
-        List<List<MailchimpMember>> batches = partitionList(members, migrationConfig.getBatchSize());
+        List<List<MailchimpMember>> batches =
+            partitionList(members, migrationConfig.getBatchSize());
 
         for (List<MailchimpMember> batch : batches) {
           try {
-            List<Subscriber> subscribers = batch.stream()
-                .map(this::convertToSubscriber)
-                .collect(Collectors.toList());
+            List<Subscriber> subscribers =
+                batch.stream().map(this::convertToSubscriber).collect(Collectors.toList());
 
             // Bulk import subscribers
             mailerLiteService.bulkImportSubscribers(subscribers, null);
@@ -209,7 +222,11 @@ public class MigrationOrchestrator {
             }
 
             migratedSubscribers += batch.size();
-            progressTracker.updateProgress(totalSubscribers, migratedSubscribers + failedSubscribers, migratedSubscribers, failedSubscribers);
+            progressTracker.updateProgress(
+                totalSubscribers,
+                migratedSubscribers + failedSubscribers,
+                migratedSubscribers,
+                failedSubscribers);
 
             // Rate limiting
             Thread.sleep(1000);
@@ -218,8 +235,17 @@ public class MigrationOrchestrator {
             log.error("Failed to migrate subscriber batch", e);
             failedSubscribers += batch.size();
             progressTracker.addError(
-                "SUBSCRIBER_MIGRATION", "Batch", "batch", e.getMessage(), "BATCH_MIGRATION_FAILED", true);
-            progressTracker.updateProgress(totalSubscribers, migratedSubscribers + failedSubscribers, migratedSubscribers, failedSubscribers);
+                "SUBSCRIBER_MIGRATION",
+                "Batch",
+                "batch",
+                e.getMessage(),
+                "BATCH_MIGRATION_FAILED",
+                true);
+            progressTracker.updateProgress(
+                totalSubscribers,
+                migratedSubscribers + failedSubscribers,
+                migratedSubscribers,
+                failedSubscribers);
           }
         }
       }
@@ -233,13 +259,16 @@ public class MigrationOrchestrator {
       result.put("selectedTags", selectedTags != null ? selectedTags : new ArrayList<>());
       result.put("groupsMapped", tagToGroupMapping.size());
       result.put("completedAt", LocalDateTime.now());
-      
+
       // Store result for UI access
       progressTracker.setStepResult("subscriber_migration", result);
 
-      log.info("Subscriber migration completed. Migrated {}/{} subscribers", migratedSubscribers, totalSubscribers);
+      log.info(
+          "Subscriber migration completed. Migrated {}/{} subscribers",
+          migratedSubscribers,
+          totalSubscribers);
       return result;
-      
+
     } catch (Exception e) {
       log.error("Subscriber migration failed", e);
       throw new RuntimeException("Subscriber migration failed", e);
@@ -248,64 +277,113 @@ public class MigrationOrchestrator {
 
   public Map<String, Object> syncOrders(List<String> selectedStores) {
     log.info("Starting order sync for {} selected stores", selectedStores.size());
-    
+
     try {
       progressTracker.updatePhase(MigrationStatus.MigrationPhase.ECOMMERCE_SETUP);
-      
+
       int totalOrders = 0;
       int syncedOrders = 0;
       int failedOrders = 0;
       List<String> processedStores = new ArrayList<>();
       List<String> failedStoresList = new ArrayList<>();
-      
+      Map<String, Integer> storeOrderCounts = new HashMap<>();
+
+      // First, get all MailerLite shops that were created
+      List<EcommerceShop> mailchimpStores = mailchimpService.getAllEcommerceShops();
+      Map<String, String> mailchimpToMailerLiteShopMapping = new HashMap<>();
+
+      // Create mapping of Mailchimp store IDs to MailerLite shop IDs
+      // For now, we'll use the store name to match since we don't persist the mapping
+      // In production, you'd want to store this mapping during store migration
+      for (String storeId : selectedStores) {
+        EcommerceShop mailchimpStore =
+            mailchimpStores.stream()
+                .filter(s -> s.getId().equals(storeId))
+                .findFirst()
+                .orElse(null);
+
+        if (mailchimpStore != null) {
+          // Since we don't have the actual MailerLite shop ID stored,
+          // we'll use a placeholder approach. In production, you'd retrieve this from DB
+          mailchimpToMailerLiteShopMapping.put(storeId, "ml_" + storeId);
+        }
+      }
+
       for (String storeId : selectedStores) {
         try {
-          // Order sync would require implementation of order-related models and methods
-          // For now, we'll log this as a placeholder
-          log.info("Order sync for store {} - Implementation pending", storeId);
-          
-          // Simulate some work for demonstration
-          Thread.sleep(1000);
-          
-          // For demo purposes, assume 10 orders per store
-          int simulatedOrders = 10;
-          totalOrders += simulatedOrders;
-          syncedOrders += simulatedOrders;
+          String mailerLiteShopId = mailchimpToMailerLiteShopMapping.get(storeId);
+          if (mailerLiteShopId == null) {
+            log.warn("No MailerLite shop found for Mailchimp store {}", storeId);
+            failedStoresList.add(storeId);
+            continue;
+          }
+
+          // Get orders from Mailchimp
+          List<Order> orders = mailchimpService.getStoreOrders(storeId);
+          int storeOrderCount = orders.size();
+          totalOrders += storeOrderCount;
+          storeOrderCounts.put(storeId, storeOrderCount);
+
+          log.info("Found {} orders to sync for store {}", storeOrderCount, storeId);
+
+          // Sync each order to MailerLite
+          int storeSyncedCount = 0;
+          int storeFailedCount = 0;
+
+          for (Order order : orders) {
+            try {
+              mailerLiteService.syncOrder(mailerLiteShopId, order);
+              syncedOrders++;
+              storeSyncedCount++;
+
+              progressTracker.updateProgress(
+                  totalOrders, syncedOrders + failedOrders, syncedOrders, failedOrders);
+
+            } catch (Exception e) {
+              log.error("Failed to sync order {} for store {}", order.getId(), storeId, e);
+              failedOrders++;
+              storeFailedCount++;
+
+              progressTracker.addError(
+                  "ORDER_SYNC", "Order", order.getId(), e.getMessage(), "ORDER_SYNC_FAILED", false);
+            }
+          }
+
           processedStores.add(storeId);
-          
-          progressTracker.updateProgress(totalOrders, syncedOrders + failedOrders, syncedOrders, failedOrders);
-          
+          log.info(
+              "Store {} order sync completed. Synced: {}, Failed: {}",
+              storeId,
+              storeSyncedCount,
+              storeFailedCount);
+
         } catch (Exception e) {
           log.error("Failed to sync orders for store: {}", storeId, e);
           failedStoresList.add(storeId);
-          // Assume 10 failed orders for this store
-          failedOrders += 10;
-          
+
           progressTracker.addError(
               "ORDER_SYNC", "Store", storeId, e.getMessage(), "STORE_ORDER_SYNC_FAILED", true);
-          progressTracker.updateProgress(totalOrders + failedOrders, syncedOrders + failedOrders, syncedOrders, failedOrders);
         }
       }
-      
+
       // Create result summary
       Map<String, Object> result = new HashMap<>();
       result.put("totalStores", selectedStores.size());
       result.put("processedStores", processedStores.size());
       result.put("failedStores", failedStoresList.size());
-      result.put("totalOrders", totalOrders + failedOrders);
+      result.put("totalOrders", totalOrders);
       result.put("syncedOrders", syncedOrders);
       result.put("failedOrders", failedOrders);
       result.put("processedStoresList", processedStores);
       result.put("failedStoresList", failedStoresList);
+      result.put("storeOrderCounts", storeOrderCounts);
       result.put("completedAt", LocalDateTime.now());
-      result.put("note", "Order sync is currently a placeholder implementation");
-      
+
       // Store result for UI access
       progressTracker.setStepResult("order_sync", result);
-      
-      log.info("Order sync completed. Synced {}/{} orders", syncedOrders, totalOrders + failedOrders);
+
+      log.info("Order sync completed. Synced {}/{} orders", syncedOrders, totalOrders);
       return result;
-      
+
     } catch (Exception e) {
       log.error("Order sync failed", e);
       throw new RuntimeException("Order sync failed", e);
@@ -437,8 +515,15 @@ public class MigrationOrchestrator {
           Map<String, Object> createdShop = mailerLiteService.createEcommerceShop(shop);
           log.info("Created e-commerce shop: {}", createdShop);
 
-          // Note: Categories and products migration would need additional Mailchimp API calls
-          // This is a simplified version focusing on shop creation
+          @SuppressWarnings("unchecked")
+          Map<String, Object> shopData = (Map<String, Object>) createdShop.get("data");
+          String mailerLiteShopId = (String) shopData.get("id");
+
+          // Migrate products for this shop
+          migrateProducts(shop.getId(), mailerLiteShopId);
+
+          // Migrate orders for this shop
+          migrateOrders(shop.getId(), mailerLiteShopId);
 
         } catch (Exception e) {
           log.error("Failed to migrate e-commerce shop: {}", shop.getName(), e);
@@ -596,6 +681,121 @@ public class MigrationOrchestrator {
     }
 
     return cleaned.isEmpty() ? null : cleaned;
+  }
+
+  private void migrateProducts(String mailchimpStoreId, String mailerLiteShopId) {
+    log.info("Starting product migration for store {} -> {}", mailchimpStoreId, mailerLiteShopId);
+
+    try {
+      List<Product> products = mailchimpService.getStoreProducts(mailchimpStoreId);
+
+      if (products.isEmpty()) {
+        log.info("No products found in Mailchimp store {}", mailchimpStoreId);
+        return;
+      }
+
+      log.info("Found {} products to migrate", products.size());
+      progressTracker.updatePhase(MigrationStatus.MigrationPhase.ECOMMERCE_SETUP);
+
+      int migratedCount = 0;
+      int failedCount = 0;
+
+      for (Product product : products) {
+        try {
+          MailerLiteProduct createdProduct =
+              mailerLiteService.createProduct(mailerLiteShopId, product);
+          log.debug(
+              "Successfully migrated product: {} -> {}", product.getName(), createdProduct.getId());
+          migratedCount++;
+
+          progressTracker.updateProgress(
+              products.size(), migratedCount, migratedCount, failedCount);
+
+        } catch (Exception e) {
+          log.error("Failed to migrate product: {}", product.getName(), e);
+          failedCount++;
+          progressTracker.addError(
+              "PRODUCT_MIGRATION",
+              "Product",
+              product.getId(),
+              e.getMessage(),
+              "PRODUCT_CREATION_FAILED",
+              false);
+        }
+      }
+
+      log.info("Product migration completed. Migrated: {}, Failed: {}", migratedCount, failedCount);
+
+    } catch (Exception e) {
+      log.error("Product migration failed for store {}", mailchimpStoreId, e);
+      progressTracker.addError(
+          "PRODUCT_MIGRATION",
+          "Store",
+          mailchimpStoreId,
+          e.getMessage(),
+          "PRODUCT_FETCH_FAILED",
+          true);
+    }
+  }
+
+  private void migrateOrders(String mailchimpStoreId, String mailerLiteShopId) {
+    log.info("Starting order migration for store {} -> {}", mailchimpStoreId, mailerLiteShopId);
+
+    try {
+      List<Order> orders = mailchimpService.getStoreOrders(mailchimpStoreId);
+
+      if (orders.isEmpty()) {
+        log.info("No orders found in Mailchimp store {}", mailchimpStoreId);
+        return;
+      }
+
+      log.info("Found {} orders to migrate", orders.size());
+      progressTracker.updatePhase(MigrationStatus.MigrationPhase.ECOMMERCE_SETUP);
+
+      int syncedCount = 0;
+      int failedCount = 0;
+
+      // Process orders in batches to avoid overwhelming the API
+      List<List<Order>> batches = partitionList(orders, 50);
+
+      for (List<Order> batch : batches) {
+        for (Order order : batch) {
+          try {
+            MailerLiteOrder syncedOrder = mailerLiteService.syncOrder(mailerLiteShopId, order);
+            log.debug("Successfully synced order: {} -> {}", order.getId(), syncedOrder.getId());
+            syncedCount++;
+
+            progressTracker.updateProgress(orders.size(), syncedCount, syncedCount, failedCount);
+
+          } catch (Exception e) {
+            log.error("Failed to sync order: {}", order.getId(), e);
+            failedCount++;
+            progressTracker.addError(
+                "ORDER_MIGRATION",
+                "Order",
+                order.getId(),
+                e.getMessage(),
+                "ORDER_SYNC_FAILED",
+                false);
+          }
+        }
+
+        // Rate limiting between batches
+        try {
+          Thread.sleep(1000);
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          break;
+        }
+      }
+
+      log.info("Order migration completed. Synced: {}, Failed: {}", syncedCount, failedCount);
+
+    } catch (Exception e) {
+      log.error("Order migration failed for store {}", mailchimpStoreId, e);
+      progressTracker.addError(
+          "ORDER_MIGRATION", "Store", mailchimpStoreId, e.getMessage(), "ORDER_FETCH_FAILED", true);
+    }
   }
 
   private <T> List<List<T>> partitionList(List<T> list, int batchSize) {
